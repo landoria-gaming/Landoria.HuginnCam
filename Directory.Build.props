@@ -1,0 +1,12 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>10</LangVersion>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'Landoria.HuginnCam'">
+    <Reference Include="netstandard">
+      <HintPath>$(ValheimGamePath)\valheim_Data\Managed\netstandard.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+  <Import Project="$(MSBuildThisFileDirectory)lib\HarmonyValidator.targets" Condition="'$(MSBuildProjectName)' == 'Landoria.HuginnCam'" />
+</Project>

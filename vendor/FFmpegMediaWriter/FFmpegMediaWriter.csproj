@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>10</LangVersion>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <RootNamespace>FFmpegMediaWriter</RootNamespace>
+    <AssemblyName>FFmpegMediaWriter</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Properties/AssemblyInfo.cs" />
+    <Compile Include="*.cs" />
+    <Compile Include="Process/*.cs" />
+    <Compile Include="Transport/*.cs" />
+  </ItemGroup>
+</Project>
