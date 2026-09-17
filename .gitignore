@@ -6,4 +6,3 @@
 *.dll
 *.pdb
 **/build/
-/doc/objective.mp4
