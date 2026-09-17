@@ -1,5 +1,8 @@
 # HuginnCam
 
+Snapshot builds use LandoriaModActions@v4.3 and the shared private references.
+Requires MOD_REFERENCES_TOKEN. Runs on main only when both versions match X.Y.Z-snapshot.
+
 HuginnCam records Valheim gameplay from an independent cinematic camera.
 
 ## Current features
