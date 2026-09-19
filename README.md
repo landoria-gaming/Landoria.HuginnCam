@@ -1,7 +1,5 @@
 # HuginnCam
 
-Requires MOD_REFERENCES_TOKEN. All five versions must match; only manifest and informational version use -snapshot.
-
 HuginnCam records Valheim gameplay from an independent cinematic camera.
 
 ## Current features
@@ -55,10 +53,6 @@ FfmpegPath = C:\ffmpeg\bin\ffmpeg.exe
 | Setting | Default | Description |
 |---|---|---|
 | `FfmpegPath` | empty | Full path to `ffmpeg.exe`; an empty value uses the Windows `PATH`. |
-
-## Valheim compatibility
-
-Target: Valheim 1.0.x
 
 ## Contact
 
