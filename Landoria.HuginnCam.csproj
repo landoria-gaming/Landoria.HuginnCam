@@ -56,6 +56,9 @@
     <Content Include="README.md" />
     <Content Include="THIRD_PARTY_NOTICES.md" />
   </ItemGroup>
+  <ItemGroup>
+    <_SnapshotExtraFiles Include="$(MSBuildProjectDirectory)\bin\Release\UnityMediaRecorder.dll;$(MSBuildProjectDirectory)\bin\Release\FFmpegMediaWriter.dll;$(MSBuildProjectDirectory)\THIRD_PARTY_NOTICES.md" />
+    <_SnapshotExtraFiles Include="$(MSBuildProjectDirectory)\bin\Release\Direct3DVideoEncoder.dll" Condition="Exists('$(MSBuildProjectDirectory)\bin\Release\Direct3DVideoEncoder.dll')" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="build\Thunderstore.targets" />
 </Project>
