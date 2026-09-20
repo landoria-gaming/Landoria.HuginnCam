@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.IO;
 using UnityEngine;
 using Recorder = UnityRuntimeCameraRecorder.UnityRuntimeCameraRecorder;
@@ -9,12 +10,15 @@ namespace Landoria.SagaCapture
     internal sealed class RecordingController : MonoBehaviour
     {
         private const int AntiAliasingSamples = 1;
+        private const int MinimumWarmupFrames = 8;
+        private const float MinimumWarmupSeconds = 0.5f;
         private SagaCaptureRig _cameraRig;
         private Recorder _recorder;
+        private Coroutine _warmupRoutine;
         private AudioListener _gameplayListener;
         private string _outputPath;
 
-        internal bool IsActive => _recorder != null;
+        internal bool IsActive => _recorder != null || _warmupRoutine != null;
 
         // Starts a recording when the recorder is idle.
         internal void StartRecording()
@@ -30,11 +34,7 @@ namespace Landoria.SagaCapture
                 ValidateGameplayCamera(gameplayCamera);
                 PrepareCamera(gameplayCamera);
                 _outputPath = CreateOutputPath();
-                _recorder = gameObject.AddComponent<Recorder>();
-                SubscribeRecorder();
-                _recorder.StartRecording(
-                    CreateSequence(), _gameplayListener,
-                    CreateSettings(_outputPath));
+                _warmupRoutine = StartCoroutine(WarmupThenStart());
                 Notify("Saga Capture is preparing CaptureMode.");
             }
             catch (Exception exception)
@@ -46,6 +46,15 @@ namespace Landoria.SagaCapture
         // Stops capture and starts asynchronous MP4 finalization.
         internal void StopRecording()
         {
+            if (_warmupRoutine != null)
+            {
+                StopCoroutine(_warmupRoutine);
+                _warmupRoutine = null;
+                ReleaseCamera();
+                Notify("Saga Capture CaptureMode cancelled during warmup.");
+                return;
+            }
+
             if (_recorder?.IsCapturing != true)
             {
                 Notify("Saga Capture is finalizing the video.");
@@ -53,6 +62,39 @@ namespace Landoria.SagaCapture
             }
             _recorder.StopRecording();
             ReleaseCamera();
+        }
+
+        // Renders several offscreen frames before starting the recorder.
+        private IEnumerator WarmupThenStart()
+        {
+            float startedAt = Time.realtimeSinceStartup;
+            int renderedFrames = 0;
+            while (renderedFrames < MinimumWarmupFrames ||
+                   Time.realtimeSinceStartup - startedAt < MinimumWarmupSeconds)
+            {
+                renderedFrames++;
+                yield return new WaitForEndOfFrame();
+            }
+
+            _warmupRoutine = null;
+            StartPreparedRecording();
+        }
+
+        // Starts capture after the secondary camera exposure has stabilized.
+        private void StartPreparedRecording()
+        {
+            try
+            {
+                _recorder = gameObject.AddComponent<Recorder>();
+                SubscribeRecorder();
+                _recorder.StartRecording(
+                    CreateSequence(), _gameplayListener,
+                    CreateSettings(_outputPath));
+            }
+            catch (Exception exception)
+            {
+                HandleRecordingFailed(exception);
+            }
         }
 
         // Validates the player camera and active audio listener.
@@ -186,6 +228,11 @@ namespace Landoria.SagaCapture
         // Releases the recorder and offscreen camera.
         private void ReleaseSession()
         {
+            if (_warmupRoutine != null)
+            {
+                StopCoroutine(_warmupRoutine);
+                _warmupRoutine = null;
+            }
             ReleaseCamera();
             if (_recorder != null)
             {

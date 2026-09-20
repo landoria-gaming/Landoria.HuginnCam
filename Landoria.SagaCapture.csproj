@@ -30,6 +30,7 @@
     <Reference Include="BepInEx"><HintPath>$(BepInExPath)\core\BepInEx.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_valheim"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\assembly_valheim.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_utils"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\assembly_utils.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="assembly_postprocessing"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\assembly_postprocessing.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.AudioModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
@@ -51,6 +52,8 @@
     <Compile Include="Infrastructure\SagaCapturePositionLogger.cs" />
     <Compile Include="Camera\SagaCaptureAudioListener.cs" />
     <Compile Include="Camera\SagaCaptureController.cs" />
+    <Compile Include="Camera\SagaCaptureEffectMirror.cs" />
+    <Compile Include="Camera\SagaCaptureEffects.cs" />
     <Compile Include="Camera\SagaCaptureInterfaceController.cs" />
     <Compile Include="Camera\SagaCaptureMainCamera.cs" />
     <Compile Include="Camera\SagaCaptureRig.cs" />

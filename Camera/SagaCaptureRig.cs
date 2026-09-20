@@ -21,6 +21,7 @@ namespace Landoria.SagaCapture
             new DroneTrajectoryPlanner();
         private readonly DroneMotion _motion = new DroneMotion();
         private readonly DroneLook _look = new DroneLook();
+        private readonly SagaCaptureEffects _effects = new SagaCaptureEffects();
         private bool _flightInitialized;
 
         internal Camera Camera => _camera;
@@ -36,6 +37,7 @@ namespace Landoria.SagaCapture
             _camera.CopyFrom(sourceCamera);
             _camera.depth = sourceCamera.depth + 1f;
             _camera.enabled = false;
+            _effects.Initialize(sourceCamera, cameraObject);
             SynchronizePose();
             if (transferAudio)
             {
@@ -71,6 +73,7 @@ namespace Landoria.SagaCapture
         // Updates autonomous drone flight after player movement completes.
         private void LateUpdate()
         {
+            _effects.Synchronize();
             Player player = Player.m_localPlayer;
             if (player == null || _camera == null)
             {
@@ -140,6 +143,7 @@ namespace Landoria.SagaCapture
                 Destroy(_camera.gameObject);
                 _camera = null;
                 _listener = null;
+                _effects.Clear();
             }
         }
 
