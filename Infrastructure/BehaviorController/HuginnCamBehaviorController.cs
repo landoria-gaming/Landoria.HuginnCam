@@ -20,35 +20,19 @@ namespace Landoria.HuginnCam
         private Vector3 _travelDirection;
         private Vector3 _idleForwardDirection;
         private float _lastProgressTime;
-        private readonly HuginnCamFrightenedFlight _frightenedFlight =
-            new HuginnCamFrightenedFlight();
+        private readonly HuginnCamCombatObserver _combatObserver =
+            new HuginnCamCombatObserver();
         private readonly HuginnCamOrbitFlight _orbitFlight = new HuginnCamOrbitFlight();
         private readonly HuginnCamLanding _landingBehavior = new HuginnCamLanding();
         private readonly HuginnCamResting _restingBehavior = new HuginnCamResting();
         private readonly HuginnCamTrailingFlight _trailingFlight = new HuginnCamTrailingFlight();
-        private readonly HuginnCamBehaviorLogger _logger = new HuginnCamBehaviorLogger();
         internal bool IsLanding => _landingBehavior.IsActive;
         internal bool IsResting => _restingBehavior.IsActive;
         internal bool IsPlayerMoving => _isMoving;
-        internal bool IsDangerActive => _frightenedFlight.IsActive;
+        internal bool IsDangerActive => _combatObserver.IsActive;
         internal Vector3 TravelDirection => _travelDirection;
-        internal string ActiveBehaviorName => _frightenedFlight.IsActive
-            ? "FrightenedFlight"
-            : _restingBehavior.IsActive
-                ? "Resting"
-                : _landingBehavior.IsActive
-                    ? "Landing"
-                    : _isMoving ? "TrailingFlight" : "OrbitFlight";
-
-        // Logs a transition after higher-priority behaviors have been evaluated.
-        internal void LogBehaviorChange(
-            bool avoidingObstacle, bool freedomFlight, bool catchUpFlight)
-        {
-            _logger.Update(
-                avoidingObstacle, freedomFlight, catchUpFlight, this);
-        }
-        internal HuginnCamFlightProfile Profile => _frightenedFlight.IsActive
-            ? _frightenedFlight.Profile
+        internal HuginnCamFlightProfile Profile => _combatObserver.IsActive
+            ? _combatObserver.Profile
             : _restingBehavior.IsActive
                 ? _restingBehavior.Profile
                 : _landingBehavior.IsActive
@@ -59,21 +43,21 @@ namespace Landoria.HuginnCam
         // Returns the current wandering destination in world space.
         internal Vector3 GetTarget(Player player, Vector3 cameraPosition)
         {
-            _frightenedFlight.Update(player, cameraPosition);
+            _combatObserver.Update(player, cameraPosition);
             if (_landingBehavior.CancelForDanger(
-                _frightenedFlight.IsActive))
+                _combatObserver.IsActive))
             {
                 AdvanceNow();
             }
             bool moving = UpdateMotion(player);
             if (_restingBehavior.CancelFor(
-                moving, _frightenedFlight.IsActive))
+                moving, _combatObserver.IsActive))
             {
                 AdvanceNow();
             }
             if (_landingBehavior.UpdateSafeIdleState(
                 moving || _restingBehavior.IsActive,
-                _frightenedFlight.IsActive))
+                _combatObserver.IsActive))
             {
                 AdvanceNow();
             }
@@ -81,14 +65,19 @@ namespace Landoria.HuginnCam
             {
                 SelectTarget(player, moving);
             }
-            Vector3 horizontalPosition = _frightenedFlight.ShouldRetreat
-                ? _frightenedFlight.GetRetreatTarget(player)
+            Vector3 horizontalPosition = _combatObserver.IsActive
+                ? _combatObserver.GetTarget(player)
                 : moving
                     ? _trailingFlight.GetPosition(player.transform.position, _travelDirection)
                     : _orbitFlight.GetPosition(player.transform.position, _idleForwardDirection);
-            float height = _frightenedFlight.IsActive
-                ? _frightenedFlight.ClampHeight(_height)
-                : _height;
+            float behaviorHeight = moving
+                ? _trailingFlight.Height
+                : _landingBehavior.IsActive || _restingBehavior.IsActive
+                    ? _height
+                    : _orbitFlight.Height;
+            float height = _combatObserver.IsActive
+                ? _combatObserver.ClampHeight(behaviorHeight)
+                : behaviorHeight;
             horizontalPosition.y = GetGroundHeight(horizontalPosition) + height;
             return horizontalPosition;
         }
@@ -118,21 +107,42 @@ namespace Landoria.HuginnCam
             return _restingBehavior.IsActive;
         }
 
-        // Applies the grounded behavior's smooth observation direction.
-        internal void UpdateRestingLook(
-            HuginnCamLook look, Transform cameraTransform, Vector3 playerFocus)
+        // Applies the look policy owned by the current primary behavior.
+        internal void UpdateLook(
+            HuginnCamBehaviorState state, HuginnCamLook look,
+            Transform cameraTransform, Vector3 playerFocus)
         {
-            _restingBehavior.UpdateLook(look, cameraTransform, playerFocus);
+            switch (state)
+            {
+                case HuginnCamBehaviorState.Resting:
+                    _restingBehavior.UpdateLook(
+                        look, cameraTransform, playerFocus);
+                    break;
+                case HuginnCamBehaviorState.Landing:
+                    look.UpdateLanding(cameraTransform, playerFocus);
+                    break;
+                case HuginnCamBehaviorState.CombatObserver:
+                    look.Update(cameraTransform,
+                        _combatObserver.GetFocus(playerFocus));
+                    break;
+                case HuginnCamBehaviorState.OrbitFlight:
+                    _orbitFlight.UpdateLook(
+                        look, cameraTransform, playerFocus);
+                    break;
+                default:
+                    look.Update(cameraTransform, playerFocus);
+                    break;
+            }
         }
 
         // Keeps the camera path outside the player's horizontal personal space.
-        internal Vector3 KeepOutsideMinimumRadius(Player player, Vector3 position)
+        internal Vector3 ConstrainNormalFlight(Player player, Vector3 position)
         {
             Vector3 horizontal = position - player.transform.position;
             horizontal.y = 0f;
             if (horizontal.magnitude >= MinimumIdleHorizontalDistance)
             {
-                return position;
+                return KeepBehindPlayer(player, position);
             }
 
             Vector3 direction = horizontal.sqrMagnitude > 0.001f
@@ -142,7 +152,17 @@ namespace Landoria.HuginnCam
                          direction.x * MinimumIdleHorizontalDistance;
             position.z = player.transform.position.z +
                          direction.z * MinimumIdleHorizontalDistance;
-            return position;
+            return KeepBehindPlayer(player, position);
+        }
+
+        // Applies the trailing half-space only during ordinary player travel.
+        private Vector3 KeepBehindPlayer(Player player, Vector3 position)
+        {
+            return _isMoving && !_combatObserver.IsActive &&
+                   !_landingBehavior.IsActive && !_restingBehavior.IsActive
+                ? _trailingFlight.KeepBehind(
+                    player.transform.position, _travelDirection, position)
+                : position;
         }
 
         // Classifies sustained travel while ignoring movement inside a small area.
@@ -232,24 +252,22 @@ namespace Landoria.HuginnCam
             _movingTarget = moving;
             bool initialLanding = !_initialized;
             _landingBehavior.SelectState(
-                moving, initialLanding, _frightenedFlight.IsActive);
-            _height = _landingBehavior.IsActive
-                ? _landingBehavior.Height
-                : moving
-                    ? _trailingFlight.SelectHeight()
-                    : _orbitFlight.SelectHeight();
+                moving, initialLanding, _combatObserver.IsActive);
             if (moving)
             {
                 _trailingFlight.SelectTarget();
             }
             else
             {
+                if (_landingBehavior.IsActive)
+                {
+                    _height = _landingBehavior.Height;
+                }
                 if (_landingBehavior.IsActive &&
                     !_landingBehavior.TrySelectTarget(
                     player, _orbitFlight, _idleForwardDirection))
                 {
                     _landingBehavior.Cancel();
-                    _height = _orbitFlight.SelectHeight();
                     _orbitFlight.SelectTarget();
                 }
                 else if (!_landingBehavior.IsActive)
@@ -260,7 +278,7 @@ namespace Landoria.HuginnCam
 
             _nextTargetTime = _landingBehavior.IsActive
                 ? float.PositiveInfinity
-                : Time.time + Random.Range(4f, 8f);
+                : Time.time + (moving ? 0.5f : Random.Range(4f, 8f));
             _initialized = true;
         }
 

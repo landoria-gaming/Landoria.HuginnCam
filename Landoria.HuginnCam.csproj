@@ -58,7 +58,7 @@
     <Compile Include="Configuration\Preference.cs" />
     <Compile Include="Recording\RecordingController.cs" />
     <Compile Include="Camera\HuginnCamController.cs" />
-    <Compile Include="Behaviors\FrightenedFlight\HuginnCamFrightenedFlight.cs" />
+    <Compile Include="Behaviors\CombatObserver\HuginnCamCombatObserver.cs" />
     <Compile Include="Audio\HuginnCamAudio.cs" />
     <Compile Include="Camera\HuginnCamEffectMirror.cs" />
     <Compile Include="Behaviors\Shared\HuginnCamLook.cs" />
@@ -68,7 +68,8 @@
     <Compile Include="Behaviors\Shared\HuginnCamVisibility.cs" />
     <Compile Include="Camera\HuginnCamRig.cs" />
     <Compile Include="Infrastructure\BehaviorController\HuginnCamBehaviorController.cs" />
-    <Compile Include="Infrastructure\BehaviorController\HuginnCamBehaviorLogger.cs" />
+    <Compile Include="Infrastructure\BehaviorController\HuginnCamBehaviorState.cs" />
+    <Compile Include="Infrastructure\BehaviorController\HuginnCamBehaviorStateMachine.cs" />
     <Compile Include="Behaviors\Shared\HuginnCamFlightProfile.cs" />
     <Compile Include="Behaviors\CatchUpFlight\HuginnCamCatchUpFlight.cs" />
     <Compile Include="Audio\HuginnCamAmbientCallScheduler.cs" />
