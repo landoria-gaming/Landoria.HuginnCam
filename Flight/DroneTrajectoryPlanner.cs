@@ -9,7 +9,6 @@ namespace Landoria.SagaCapture
         private const float MinimumLookAhead = 4f;
         private const float LookAheadSeconds = 2f;
         private const float ProbeRadius = 0.35f;
-        private const float TerrainClearance = 2f;
         private const int TerrainSamples = 8;
         private static readonly float[] SideOffsets = { -1f, 1f, -2f, 2f };
         private Vector3 _plannedTarget;
@@ -18,7 +17,8 @@ namespace Landoria.SagaCapture
 
         // Reuses one plan for 100 ms before simulating routes again.
         internal Vector3 Plan(
-            Vector3 origin, Vector3 desired, float speed)
+            Vector3 origin, Vector3 desired, float speed,
+            float terrainClearance)
         {
             if (_initialized && Time.time < _nextRefreshTime)
             {
@@ -27,8 +27,10 @@ namespace Landoria.SagaCapture
 
             float lookAhead = Mathf.Max(
                 MinimumLookAhead, speed * LookAheadSeconds);
-            Vector3 target = RaiseForTerrain(origin, desired, lookAhead);
-            _plannedTarget = ChooseObstacleRoute(origin, target, lookAhead);
+            Vector3 target = RaiseForTerrain(
+                origin, desired, lookAhead, terrainClearance);
+            _plannedTarget = ChooseObstacleRoute(
+                origin, target, lookAhead, terrainClearance);
             _nextRefreshTime = Time.time + RefreshInterval;
             _initialized = true;
             return _plannedTarget;
@@ -36,7 +38,8 @@ namespace Landoria.SagaCapture
 
         // Chooses the first clear lateral route or keeps the direct route.
         private static Vector3 ChooseObstacleRoute(
-            Vector3 origin, Vector3 target, float lookAhead)
+            Vector3 origin, Vector3 target, float lookAhead,
+            float terrainClearance)
         {
             if (!HasObstacle(origin, target, lookAhead))
             {
@@ -54,7 +57,8 @@ namespace Landoria.SagaCapture
             foreach (float offset in SideOffsets)
             {
                 Vector3 candidate = target + right * offset;
-                candidate = RaiseForTerrain(origin, candidate, lookAhead);
+                candidate = RaiseForTerrain(
+                    origin, candidate, lookAhead, terrainClearance);
                 if (!HasObstacle(origin, candidate, lookAhead))
                 {
                     return candidate;
@@ -99,7 +103,8 @@ namespace Landoria.SagaCapture
 
         // Raises the target when any sampled route point approaches terrain.
         private static Vector3 RaiseForTerrain(
-            Vector3 origin, Vector3 target, float lookAhead)
+            Vector3 origin, Vector3 target, float lookAhead,
+            float terrainClearance)
         {
             Vector3 route = target - origin;
             float distance = Mathf.Min(route.magnitude, lookAhead);
@@ -116,7 +121,7 @@ namespace Landoria.SagaCapture
                 if (TryGroundHeight(point, out float ground))
                 {
                     requiredLift = Mathf.Max(
-                        requiredLift, ground + TerrainClearance - point.y);
+                        requiredLift, ground + terrainClearance - point.y);
                 }
             }
 

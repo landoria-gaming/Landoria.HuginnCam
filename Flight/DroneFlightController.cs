@@ -10,7 +10,13 @@ namespace Landoria.SagaCapture
         private const float OrbitReturnDistance = 4f;
         private const float MinimumTrailingDistance = 1f;
         private const float MaximumTrailingDistance = 4f;
-        private const float MinimumHeight = 2f;
+        private const float MinimumTrailingHeight = 2f;
+        private const float SlowTrailingClearance = 1.5f;
+        private const float MinimumOrbitHeight = 0.5f;
+        private const float FullTerrainClearanceSpeed = 3f;
+        private const float CloseOrbitDistance = 3f;
+        private const float CloseOrbitMaximumHeight = 2f;
+        private const float CloseOrbitHeightBlendDistance = 1f;
         private const float OrbitRadiusPeriod = 30f;
         private DroneFlightMode _mode;
         private Vector3 _travelDirection = Vector3.forward;
@@ -19,6 +25,24 @@ namespace Landoria.SagaCapture
         private bool _initialized;
 
         internal DroneFlightMode Mode => _mode;
+
+        // Returns mode-safe clearance with extra margin as orbit speed rises.
+        internal float GetTerrainClearance(float speed)
+        {
+            if (_mode == DroneFlightMode.TrailingFlight)
+            {
+                float trailingSpeedBlend = Mathf.InverseLerp(
+                    OrbitSpeed, FullTerrainClearanceSpeed, speed);
+                return Mathf.Lerp(
+                    SlowTrailingClearance, MinimumTrailingHeight,
+                    trailingSpeedBlend);
+            }
+
+            float speedBlend = Mathf.InverseLerp(
+                OrbitSpeed, FullTerrainClearanceSpeed, speed);
+            return Mathf.Lerp(
+                MinimumOrbitHeight, MinimumTrailingHeight, speedBlend);
+        }
 
         // Selects a mode and returns its desired world position and speed.
         internal Vector3 Update(
@@ -32,7 +56,9 @@ namespace Landoria.SagaCapture
             if (_mode == DroneFlightMode.TrailingFlight)
             {
                 targetSpeed = GetTrailingSpeed(player, dronePosition);
-                return GetTrailingTarget(playerPosition, environment);
+                return GetTrailingTarget(
+                    playerPosition, environment,
+                    GetTerrainClearance(targetSpeed));
             }
 
             targetSpeed = OrbitSpeed;
@@ -131,7 +157,8 @@ namespace Landoria.SagaCapture
 
         // Creates a target behind the player's direction of travel.
         private Vector3 GetTrailingTarget(
-            Vector3 playerPosition, DroneEnvironment environment)
+            Vector3 playerPosition, DroneEnvironment environment,
+            float terrainClearance)
         {
             float phase = Time.time * 0.17f;
             float distance = Mathf.Lerp(
@@ -142,7 +169,9 @@ namespace Landoria.SagaCapture
             Vector3 target = playerPosition - _travelDirection * distance +
                              right * lateral;
             target.y = GroundHeight(target) +
-                       Mathf.Lerp(MinimumHeight, environment.MaximumHeight, 0.35f);
+                       Mathf.Lerp(
+                           terrainClearance,
+                           environment.MaximumHeight, 0.35f);
             return target;
         }
 
@@ -161,8 +190,17 @@ namespace Landoria.SagaCapture
                 Mathf.Cos(_orbitAngle), 0f, Mathf.Sin(_orbitAngle));
             Vector3 target = playerPosition + radial * radius;
             float heightPhase = 0.5f + Mathf.Sin(Time.time * 0.13f) * 0.5f;
+            float closeBlend = Mathf.SmoothStep(
+                0f, 1f,
+                Mathf.InverseLerp(
+                    CloseOrbitDistance,
+                    CloseOrbitDistance + CloseOrbitHeightBlendDistance,
+                    radius));
+            float maximumHeight = Mathf.Lerp(
+                Mathf.Min(CloseOrbitMaximumHeight, environment.MaximumHeight),
+                environment.MaximumHeight, closeBlend);
             target.y = GroundHeight(target) + Mathf.Lerp(
-                MinimumHeight, environment.MaximumHeight, heightPhase);
+                MinimumOrbitHeight, maximumHeight, heightPhase);
             return target;
         }
 

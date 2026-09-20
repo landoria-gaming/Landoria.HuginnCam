@@ -49,7 +49,6 @@ namespace Landoria.SagaCapture
                 _gameplayCamera.enabled = false;
                 _cameraRig.BeginPreview();
                 _interface.Hide();
-                Notify("Saga Capture PreviewMode enabled.");
             }
             catch (Exception exception)
             {
@@ -84,7 +83,6 @@ namespace Landoria.SagaCapture
                 _gameplayCamera = null;
             }
             _interface.Restore();
-            Notify("Saga Capture PreviewMode disabled.");
         }
 
         // Restores the gameplay view before plugin unload.

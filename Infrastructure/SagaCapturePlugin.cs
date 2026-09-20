@@ -1,6 +1,7 @@
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
+using HarmonyLib;
 using Landoria.Shared;
 using UnityEngine;
 
@@ -15,12 +16,17 @@ namespace Landoria.SagaCapture
         private const string PluginVersion = "1.0.0";
         private SagaCaptureController _cameraController;
         private RecordingController _recordingController;
+        private Harmony _harmony;
+        private static SagaCapturePlugin _instance;
         internal static ManualLogSource Log { get; private set; }
+        internal static bool IsPreviewModeActive =>
+            _instance?._cameraController?.IsActive == true;
 
         // Initializes the plugin logging.
         private void Awake()
         {
             Log = Logger;
+            _instance = this;
             Logger.LogInfo($"AssemblyVersion: {GetType().Assembly.GetName().Version}.");
             Preference.Initialize(Config);
             ConfigWatcher.Initialize(
@@ -28,6 +34,8 @@ namespace Landoria.SagaCapture
                 () => Preference.RestoreDefaults(Config));
             _cameraController = gameObject.AddComponent<SagaCaptureController>();
             _recordingController = gameObject.AddComponent<RecordingController>();
+            _harmony = new Harmony(PluginGuid);
+            _harmony.PatchAll();
             Log.LogInfo($"{PluginName} {PluginVersion} is loaded.");
         }
 
@@ -35,11 +43,16 @@ namespace Landoria.SagaCapture
         private void Update()
         {
             ConfigWatcher.Update();
-            bool exitRequested = ZInput.GetKeyDown(KeyCode.Escape) ||
-                                 IsMainKeyDown(Preference.CaptureModeShortcut);
+            bool escapePressed = ZInput.GetKeyDown(KeyCode.Escape);
+            bool captureKeyPressed =
+                IsMainKeyDown(Preference.CaptureModeShortcut);
             if (_cameraController.IsActive)
             {
-                if (exitRequested)
+                if (escapePressed)
+                {
+                    SagaCaptureMenuPatch.SuppressThisFrame();
+                }
+                if (escapePressed || captureKeyPressed)
                 {
                     _cameraController.ToggleCamera();
                 }
@@ -48,7 +61,7 @@ namespace Landoria.SagaCapture
 
             if (_recordingController.IsActive)
             {
-                if (exitRequested)
+                if (captureKeyPressed)
                 {
                     _recordingController.StopRecording();
                 }
@@ -109,12 +122,15 @@ namespace Landoria.SagaCapture
         private void OnDestroy()
         {
             ConfigWatcher.Dispose();
+            _harmony?.UnpatchSelf();
+            _harmony = null;
             _recordingController?.Shutdown();
             _recordingController = null;
             _cameraController?.Shutdown();
             _cameraController = null;
             Log?.LogInfo($"{PluginName} {PluginVersion} is unloaded.");
             Log = null;
+            _instance = null;
         }
     }
 }

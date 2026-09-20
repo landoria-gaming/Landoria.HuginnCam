@@ -21,6 +21,7 @@ namespace Landoria.SagaCapture
             new DroneTrajectoryPlanner();
         private readonly DroneMotion _motion = new DroneMotion();
         private readonly DroneLook _look = new DroneLook();
+        private readonly DroneFraming _framing = new DroneFraming();
         private readonly SagaCaptureEffects _effects = new SagaCaptureEffects();
         private bool _flightInitialized;
 
@@ -104,10 +105,21 @@ namespace Landoria.SagaCapture
             _environment.Update(position);
             Vector3 desired = _flight.Update(
                 player, position, _environment, out float targetSpeed);
-            desired = _trajectory.Plan(position, desired, _motion.Speed);
+            Vector3 focus = GetPlayerFocus(player);
+            if (!_framing.IsVisible(_camera, focus))
+            {
+                desired = _framing.GetRecoveryTarget(
+                    player, position);
+                targetSpeed = Mathf.Max(targetSpeed, player.m_runSpeed);
+            }
+            float terrainClearance =
+                _flight.GetTerrainClearance(_motion.Speed);
+            desired = _trajectory.Plan(
+                position, desired, _motion.Speed, terrainClearance);
             Vector3 next = _motion.Step(position, desired, targetSpeed);
-            _camera.transform.position = KeepAboveTerrain(next);
-            _look.Update(_camera.transform, GetPlayerFocus(player));
+            _camera.transform.position = KeepAboveTerrain(
+                next, terrainClearance);
+            _look.Update(_camera.transform, focus);
         }
 
         // Returns a stable point near the player's upper body.
@@ -116,13 +128,15 @@ namespace Landoria.SagaCapture
             return player.transform.position + Vector3.up * 1.25f;
         }
 
-        // Enforces the absolute two-meter terrain clearance safety rule.
-        private static Vector3 KeepAboveTerrain(Vector3 position)
+        // Enforces the active mode's terrain clearance on every frame.
+        private static Vector3 KeepAboveTerrain(
+            Vector3 position, float terrainClearance)
         {
             if (ZoneSystem.instance != null &&
                 ZoneSystem.instance.GetGroundHeight(position, out float ground))
             {
-                position.y = Mathf.Max(position.y, ground + 2f);
+                position.y = Mathf.Max(
+                    position.y, ground + terrainClearance);
             }
 
             return position;

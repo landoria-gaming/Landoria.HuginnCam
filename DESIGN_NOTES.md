@@ -41,7 +41,9 @@ The drone has two main flight modes:
 - Its ideal position is between 1 and 4 meters behind the player.
 - It may move slightly to the left or right of the ideal trailing line.
 - It always looks at the player.
-- It always stays at least 2 meters above the terrain.
+- At low speed, it may descend to 1.5 meters above the terrain.
+- Its terrain clearance rises smoothly to 2 meters as its speed approaches
+  3 meters per second.
 - It reevaluates the segment between itself and the player every 100 ms.
 - Its obstacle look-ahead distance increases with its current speed.
 - It uses 4 meters as the minimum obstacle look-ahead distance.
@@ -84,6 +86,10 @@ The zones define these flight limits:
 - The drone adapts its height to keep the player visible.
 - The camera may use a slight upward or downward pitch when required to keep
   the player inside the frame.
+- Camera pitch is limited to 25 degrees above or below the horizon.
+- The pitch limit takes priority over keeping the player visible.
+- If the player leaves the field of view, the drone quickly returns to a
+  nearby recovery position while preserving smooth acceleration and rotation.
 
 ### OrbitFlight
 
@@ -106,7 +112,11 @@ The zones define these flight limits:
 - The transition between both flight modes remains gradual.
 - Its horizontal orbit radius evolves gradually within the active environment
   zone limits.
-- It stays at least 2 meters above the terrain.
+- It stays at least 0.5 meters above the terrain.
+- Its terrain clearance increases smoothly from 0.5 to 2 meters as its speed
+  rises, reaching the full clearance at 3 meters per second.
+- When it is less than 3 meters horizontally from the player, it stays no
+  higher than 2 meters above the terrain.
 - It stays below the maximum height of the active environment zone.
 - When an orbit session begins, the drone chooses one rotation direction.
 - It keeps that direction for the entire orbit session.
@@ -118,7 +128,8 @@ The zones define these flight limits:
 - `F8` enters or leaves `CaptureMode`, which records video.
 - `Shift+F8` enters or leaves `PreviewMode`, which displays the drone camera
   without recording.
-- `Escape` leaves the active mode.
+- `Escape` leaves `PreviewMode` without opening Valheim's menu.
+- `Escape` does not stop `CaptureMode`; it retains its normal Valheim behavior.
 - The shortcuts must remain configurable through BepInEx.
 
 ## Configuration

@@ -7,6 +7,7 @@ namespace Landoria.SagaCapture
     {
         private const float RotationSmoothTime = 0.8f;
         private const float MaximumRotationSpeed = 45f;
+        private const float MaximumPitchAngle = 25f;
         private float _yawVelocity;
         private float _pitchVelocity;
 
@@ -15,7 +16,7 @@ namespace Landoria.SagaCapture
         {
             Vector3 angles = GetLevelAngles(cameraTransform.position, focus);
             cameraTransform.rotation = Quaternion.Euler(
-                angles.x, angles.y, 0f);
+                ClampPitch(angles.x), angles.y, 0f);
         }
 
         // Smooths pitch and yaw while keeping the horizon level.
@@ -24,7 +25,7 @@ namespace Landoria.SagaCapture
             Vector3 target = GetLevelAngles(cameraTransform.position, focus);
             Vector3 current = cameraTransform.eulerAngles;
             float pitch = Mathf.SmoothDampAngle(
-                current.x, target.x, ref _pitchVelocity,
+                current.x, ClampPitch(target.x), ref _pitchVelocity,
                 RotationSmoothTime, MaximumRotationSpeed);
             float yaw = Mathf.SmoothDampAngle(
                 current.y, target.y, ref _yawVelocity,
@@ -44,6 +45,14 @@ namespace Landoria.SagaCapture
             Vector3 angles = Quaternion.LookRotation(
                 direction.normalized, Vector3.up).eulerAngles;
             return new Vector3(angles.x, angles.y, 0f);
+        }
+
+        // Limits forward and backward tilt while preserving a level horizon.
+        private static float ClampPitch(float angle)
+        {
+            float signed = Mathf.DeltaAngle(0f, angle);
+            return Mathf.Clamp(
+                signed, -MaximumPitchAngle, MaximumPitchAngle);
         }
     }
 }
