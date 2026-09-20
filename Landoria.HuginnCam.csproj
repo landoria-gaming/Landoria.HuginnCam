@@ -55,6 +55,7 @@
   <ItemGroup>
     <Compile Include="Configuration\ConfigWatcher.cs" />
     <Compile Include="Infrastructure\HuginnCamPlugin.cs" />
+    <Compile Include="Infrastructure\HuginnCamPositionLogger.cs" />
     <Compile Include="Configuration\Preference.cs" />
     <Compile Include="Recording\RecordingController.cs" />
     <Compile Include="Camera\HuginnCamController.cs" />
@@ -64,24 +65,20 @@
     <Compile Include="Audio\HuginnCamAudio.cs" />
     <Compile Include="Camera\HuginnCamEffectMirror.cs" />
     <Compile Include="Behaviors\Shared\HuginnCamLook.cs" />
-    <Compile Include="Behaviors\FreedomFlight\HuginnCamFreedomFlight.cs" />
     <Compile Include="Behaviors\Shared\HuginnCamSpeed.cs" />
     <Compile Include="Behaviors\Shared\HuginnCamTerrain.cs" />
     <Compile Include="Behaviors\Shared\HuginnCamTreeAvoidance.cs" />
-    <Compile Include="Behaviors\Shared\HuginnCamVisibility.cs" />
     <Compile Include="Camera\HuginnCamRig.cs" />
     <Compile Include="Infrastructure\BehaviorController\HuginnCamBehaviorController.cs" />
     <Compile Include="Infrastructure\BehaviorController\HuginnCamBehaviorState.cs" />
     <Compile Include="Infrastructure\BehaviorController\HuginnCamBehaviorStateMachine.cs" />
     <Compile Include="Behaviors\Shared\HuginnCamFlightProfile.cs" />
+    <Compile Include="Behaviors\Shared\HuginnCamForestAwareness.cs" />
     <Compile Include="Behaviors\CatchUpFlight\HuginnCamCatchUpFlight.cs" />
     <Compile Include="Audio\HuginnCamAmbientCallScheduler.cs" />
-    <Compile Include="Behaviors\Landing\HuginnCamLanding.cs" />
-    <Compile Include="Behaviors\Resting\HuginnCamResting.cs" />
     <Compile Include="Behaviors\ObserverFlight\HuginnCamObserverFlight.cs" />
     <Compile Include="Behaviors\TrailingFlight\HuginnCamTrailingFlight.cs" />
-    <Compile Include="Behaviors\Takeoff\HuginnCamTakeoff.cs" />
-    <Compile Include="Behaviors\ObstacleAvoidance\HuginnCamObstacleAvoidance.cs" />
+    <Compile Include="Behaviors\TrailingFlight\HuginnCamTrailingObstacleAvoidance.cs" />
     <Compile Include="Camera\HuginnCamInterfaceController.cs" />
     <Compile Include="Camera\HuginnCamMainCamera.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -89,11 +86,9 @@
   <ItemGroup>
     <Content Include="LICENSE" /><Content Include="manifest.json" />
     <Content Include="README.md" />
-    <EmbeddedResource Include="Assets\Audio\craw1.ogg" />
     <EmbeddedResource Include="Assets\Audio\craw2.ogg" />
     <EmbeddedResource Include="Assets\Audio\craw3.ogg" />
     <EmbeddedResource Include="Assets\Audio\craw4.ogg" />
-    <EmbeddedResource Include="Assets\Audio\craw5.ogg" />
     <EmbeddedResource Include="Assets\Audio\craw6.ogg" />
   </ItemGroup>
   <ItemGroup>

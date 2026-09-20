@@ -11,29 +11,18 @@ namespace Landoria.HuginnCam
         // Selects the single primary state and logs effective transitions.
         internal void Update(
             HuginnCamBehaviorController controller,
-            HuginnCamFreedomFlight freedomFlight,
-            HuginnCamCatchUpFlight catchUpFlight,
-            HuginnCamObstacleAvoidance obstacleAvoidance)
+            HuginnCamCatchUpFlight catchUpFlight)
         {
-            _state = freedomFlight.IsActive
-                ? HuginnCamBehaviorState.FreedomFlight
-                : controller.IsTakingOff
-                    ? HuginnCamBehaviorState.Takeoff
-                    : controller.IsDangerActive
-                        ? HuginnCamBehaviorState.CombatObserver
-                        : controller.IsResting
-                            ? HuginnCamBehaviorState.Resting
-                            : controller.IsLanding
-                                ? HuginnCamBehaviorState.Landing
-                                : catchUpFlight.IsActive
-                                    ? HuginnCamBehaviorState.CatchUpFlight
-                                    : controller.IsPlayerMoving
-                                        ? HuginnCamBehaviorState.TrailingFlight
-                                        : HuginnCamBehaviorState.ObserverFlight;
-            string effectiveName = obstacleAvoidance.IsActive
-                ? "ObstacleAvoidance"
-                : _state.ToString();
-            LogTransition(effectiveName);
+            _state = controller.IsDangerActive
+                ? HuginnCamBehaviorState.CombatObserver
+                : controller.IsMobileDanger
+                    ? HuginnCamBehaviorState.TrailingFlight
+                    : catchUpFlight.IsActive
+                        ? HuginnCamBehaviorState.CatchUpFlight
+                        : controller.IsPlayerMoving
+                            ? HuginnCamBehaviorState.TrailingFlight
+                            : HuginnCamBehaviorState.ObserverFlight;
+            LogTransition(_state.ToString());
         }
 
         // Returns whether one primary behavior currently owns the camera.
@@ -45,18 +34,8 @@ namespace Landoria.HuginnCam
         // Selects the profile of the interruption or active primary state.
         internal HuginnCamFlightProfile GetProfile(
             HuginnCamBehaviorController controller,
-            HuginnCamFreedomFlight freedomFlight,
-            HuginnCamCatchUpFlight catchUpFlight,
-            HuginnCamObstacleAvoidance obstacleAvoidance)
+            HuginnCamCatchUpFlight catchUpFlight)
         {
-            if (obstacleAvoidance.IsActive)
-            {
-                return obstacleAvoidance.Profile;
-            }
-            if (_state == HuginnCamBehaviorState.FreedomFlight)
-            {
-                return freedomFlight.Profile;
-            }
             if (_state == HuginnCamBehaviorState.CatchUpFlight)
             {
                 return catchUpFlight.Profile;
@@ -74,16 +53,8 @@ namespace Landoria.HuginnCam
 
             string previous = _effectiveName ?? "None";
             _effectiveName = next;
-            string message =
-                $"Huginn behavior changed: {previous} -> {next}";
-            if (next == "ObstacleAvoidance")
-            {
-                HuginnCamPlugin.Log.LogWarning(
-                    $"{message}. Emergency obstacle avoidance activated.");
-                return;
-            }
-
-            HuginnCamPlugin.Log.LogInfo(message);
+            HuginnCamPlugin.Log.LogInfo(
+                $"Huginn behavior changed: {previous} -> {next}");
         }
     }
 }

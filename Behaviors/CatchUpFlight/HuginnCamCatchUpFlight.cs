@@ -8,9 +8,6 @@ namespace Landoria.HuginnCam
         private const float ActivationDistance = 5f;
         private const float ReleaseDistance = 2.5f;
         private const float MinimumSpeed = 1f;
-        private const float MaximumCruiseSpeed = 2f;
-        private const float MaximumSpeed = 6f;
-        private const float SpeedPerMeter = 0.75f;
         private const float AccelerationRate = 1.5f;
         private const float TargetRefreshInterval = 0.5f;
         private const float TargetSmoothTime = 0.6f;
@@ -19,23 +16,19 @@ namespace Landoria.HuginnCam
         private Vector3 _smoothedTarget;
         private Vector3 _targetVelocity;
         private float _nextTargetTime;
+        private float _maximumSpeed = MinimumSpeed;
         private bool _targetInitialized;
 
         internal bool IsActive { get; private set; }
         internal HuginnCamFlightProfile Profile => new HuginnCamFlightProfile(
-            MinimumSpeed, MaximumCruiseSpeed, MaximumSpeed,
-            ActivationDistance, SpeedPerMeter, AccelerationRate);
-
-        // Forces the recovery state after an independent freedom flight.
-        internal void BeginForced()
-        {
-            IsActive = true;
-            _targetInitialized = false;
-        }
+            _maximumSpeed, _maximumSpeed, _maximumSpeed,
+            float.MaxValue, 0f, AccelerationRate);
 
         // Enters with a large delay and exits only after most delay is recovered.
-        internal void Update(float targetDistance, bool allowed)
+        internal void Update(
+            float targetDistance, bool allowed, float maximumSpeed)
         {
+            _maximumSpeed = Mathf.Max(MinimumSpeed, maximumSpeed);
             if (!allowed)
             {
                 IsActive = false;

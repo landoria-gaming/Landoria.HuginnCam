@@ -6,10 +6,6 @@ namespace Landoria.HuginnCam
         ObserverFlight,
         TrailingFlight,
         CatchUpFlight,
-        FreedomFlight,
-        CombatObserver,
-        Landing,
-        Resting,
-        Takeoff
+        CombatObserver
     }
 }

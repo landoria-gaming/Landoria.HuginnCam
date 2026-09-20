@@ -59,23 +59,6 @@ namespace Landoria.HuginnCam
             }
         }
 
-        // Faces downhill on slopes and the player on nearly level ground.
-        internal void UpdateLanding(
-            Transform cameraTransform, Vector3 playerFocus,
-            Vector3 bodyDirection)
-        {
-            if (HuginnCamTerrain.TryGetDownhillDirection(
-                cameraTransform.position, out Vector3 downhill))
-            {
-                UpdateDirection(cameraTransform,
-                    SelectHeadDirection(downhill, bodyDirection));
-                return;
-            }
-
-            UpdateFlightAware(
-                cameraTransform, playerFocus, bodyDirection);
-        }
-
         // Smoothly faces an unrestricted direction during free flight.
         internal void UpdateFree(Transform cameraTransform, Vector3 direction)
         {

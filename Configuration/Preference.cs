@@ -13,8 +13,6 @@ namespace Landoria.HuginnCam
         private static ConfigEntry<UnityRuntimeCameraRecorder.RecordingQualityPreset>
             recordingQuality;
         private static ConfigEntry<int> maximumFrameRate;
-        private static ConfigEntry<bool> disableFreedomFlights;
-        private static ConfigEntry<bool> disableLandings;
 
         internal static KeyboardShortcut RecordingShortcut => recordingShortcut.Value;
         internal static KeyboardShortcut HuginnCamShortcut => huginnCamShortcut.Value;
@@ -22,8 +20,6 @@ namespace Landoria.HuginnCam
         internal static UnityRuntimeCameraRecorder.RecordingQualityPreset RecordingQuality =>
             recordingQuality.Value;
         internal static int MaximumFrameRate => maximumFrameRate.Value;
-        internal static bool DisableFreedomFlights => disableFreedomFlights.Value;
-        internal static bool DisableLandings => disableLandings.Value;
 
         // Creates the saved configuration entries used by the mod.
         internal static void Initialize(ConfigFile config)
@@ -57,16 +53,6 @@ namespace Landoria.HuginnCam
                 new ConfigDescription(
                     "Maximum recording frame rate, up to 60 FPS.",
                     new AcceptableValueRange<int>(1, 60)));
-            disableFreedomFlights = config.Bind(
-                "Behavior",
-                "DisableFreedomFlights",
-                false,
-                "Disable Huginn's occasional freedom-flight sessions.");
-            disableLandings = config.Bind(
-                "Behavior",
-                "DisableLandings",
-                false,
-                "Disable Huginn's occasional landings while the player is idle.");
         }
 
         // Restores every setting and recreates the configuration file.
@@ -79,8 +65,6 @@ namespace Landoria.HuginnCam
             recordingQuality.Value =
                 UnityRuntimeCameraRecorder.RecordingQualityPreset.Medium;
             maximumFrameRate.Value = 30;
-            disableFreedomFlights.Value = false;
-            disableLandings.Value = false;
             config.Save();
             ConfigWatcher.IgnoreCurrentFileVersion();
         }

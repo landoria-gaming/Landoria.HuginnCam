@@ -6,7 +6,7 @@ namespace Landoria.HuginnCam
     internal sealed class HuginnCamTrailingFlight
     {
         private const float MinimumDistance = 3f;
-        private const float MaximumDistance = 8f;
+        private const float MaximumDistance = 6f;
         private const float MaximumLateralDistance = 5f;
         private const float MinimumHeight = 3f;
         private const float MaximumHeight = 10f;
@@ -16,6 +16,9 @@ namespace Landoria.HuginnCam
         private const float OffsetSmoothTime = 2f;
         private const float MaximumOffsetSpeed = 1f;
         private const float MaximumHeightSpeed = 0.75f;
+        private const float ObstacleCheckInterval = 0.5f;
+        private const float TerrainLookAheadDistance = 10f;
+        private const float TerrainLookAheadClearance = 3f;
         private float _distance;
         private float _lateral;
         private float _height;
@@ -25,6 +28,7 @@ namespace Landoria.HuginnCam
         private float _distanceVelocity;
         private float _lateralVelocity;
         private float _heightVelocity;
+        private float _nextObstacleCheckTime;
         private bool _initialized;
 
         internal HuginnCamFlightProfile Profile => new HuginnCamFlightProfile(
@@ -61,11 +65,43 @@ namespace Landoria.HuginnCam
         }
 
         // Resolves the selected point relative to the player's travel direction.
-        internal Vector3 GetPosition(Vector3 origin, Vector3 direction)
+        internal Vector3 GetPosition(
+            Vector3 origin, Vector3 direction, Vector3 cameraPosition)
         {
             UpdateOffsets();
             Vector3 right = Vector3.Cross(Vector3.up, direction);
+            Vector3 target = origin - direction * _distance + right * _lateral;
+            if (Time.time >= _nextObstacleCheckTime)
+            {
+                ApplyObstacleAvoidance(cameraPosition, target, right);
+                _nextObstacleCheckTime = Time.time + ObstacleCheckInterval;
+            }
+
             return origin - direction * _distance + right * _lateral;
+        }
+
+        // Starts climbing as soon as rising terrain appears along the route.
+        internal Vector3 AnticipateTerrain(
+            Vector3 cameraPosition, Vector3 target)
+        {
+            return HuginnCamTerrain.AnticipateRise(
+                cameraPosition, target, TerrainLookAheadDistance,
+                TerrainLookAheadClearance);
+        }
+
+        // Smoothly redirects the destination sideways when one side clears the route.
+        private void ApplyObstacleAvoidance(
+            Vector3 cameraPosition, Vector3 target, Vector3 right)
+        {
+            if (!HuginnCamTrailingObstacleAvoidance.TryChooseOffset(
+                    cameraPosition, target, right, _targetLateral,
+                    out float lateral))
+            {
+                return;
+            }
+
+            _targetLateral = Mathf.Clamp(
+                lateral, -MaximumLateralDistance, MaximumLateralDistance);
         }
 
         // Smooths all relative offsets toward the latest half-second target.

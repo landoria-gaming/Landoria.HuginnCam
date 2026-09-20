@@ -10,7 +10,7 @@ namespace Landoria.HuginnCam
         private const float StationaryDelay = 3f;
         private const float InitialMovementSpeed = 0.5f;
         private const float MinimumIdleHorizontalDistance = 2f;
-        private float _height;
+        private const float ForestMaximumHeight = 3f;
         private float _nextTargetTime;
         private bool _movingTarget;
         private bool _initialized;
@@ -25,153 +25,83 @@ namespace Landoria.HuginnCam
             new HuginnCamCombatObserver();
         private readonly HuginnCamObserverFlight _observerFlight =
             new HuginnCamObserverFlight();
-        private readonly HuginnCamLanding _landingBehavior = new HuginnCamLanding();
-        private readonly HuginnCamResting _restingBehavior = new HuginnCamResting();
         private readonly HuginnCamTrailingFlight _trailingFlight = new HuginnCamTrailingFlight();
-        private readonly HuginnCamTakeoff _takeoffBehavior =
-            new HuginnCamTakeoff();
-        internal bool IsLanding => _landingBehavior.IsActive;
-        internal bool IsResting => _restingBehavior.IsActive;
+        private readonly HuginnCamForestAwareness _forestAwareness =
+            new HuginnCamForestAwareness();
         internal bool IsPlayerMoving => _isMoving;
         internal bool IsDangerActive => _combatObserver.IsActive;
-        internal bool IsTakingOff => _takeoffBehavior.IsActive;
+        internal bool IsMobileDanger => _isMoving &&
+                                        _combatObserver.HasRecentDanger;
+        internal bool IsInForest => _forestAwareness.IsInForest;
         internal Vector3 TravelDirection => _travelDirection;
         internal HuginnCamFlightProfile Profile => _combatObserver.IsActive
             ? _combatObserver.Profile
-            : _takeoffBehavior.IsActive
-                ? _takeoffBehavior.Profile
-            : _restingBehavior.IsActive
-                ? _restingBehavior.Profile
-                : _landingBehavior.IsActive
-                    ? _landingBehavior.Profile
-                    : _isMoving
-                        ? _trailingFlight.Profile
-                        : _observerFlight.Profile;
+            : _isMoving
+                ? _trailingFlight.Profile
+                : _observerFlight.Profile;
         // Returns the current wandering destination in world space.
         internal Vector3 GetTarget(Player player, Vector3 cameraPosition)
         {
-            _combatObserver.Update(player, cameraPosition);
-            if (_landingBehavior.CancelForDanger(
-                _combatObserver.IsActive))
-            {
-                AdvanceNow();
-            }
+            _forestAwareness.Update(
+                player.transform.position, cameraPosition);
             bool moving = UpdateMotion(player);
-            if (_restingBehavior.CancelForDanger(
-                _combatObserver.IsActive))
-            {
-                BeginTakeoff(cameraPosition);
-                AdvanceNow();
-            }
+            _combatObserver.Update(player, cameraPosition, moving);
             if (!_initialized || moving != _movingTarget || Time.time >= _nextTargetTime)
             {
                 SelectTarget(player, moving);
             }
-            if (_takeoffBehavior.IsActive)
-            {
-                Vector3 takeoffTarget = _takeoffBehavior.Update(cameraPosition);
-                if (_takeoffBehavior.IsActive)
-                {
-                    return takeoffTarget;
-                }
-                AdvanceNow();
-            }
-            if (!moving && !_landingBehavior.IsActive &&
-                !_restingBehavior.IsActive)
+            if (!moving)
             {
                 _observerFlight.Update(
                     cameraPosition, player.transform.position);
             }
             Vector3 horizontalPosition = _combatObserver.IsActive
                 ? _combatObserver.GetTarget(player)
-                : _landingBehavior.IsActive
-                    ? _landingBehavior.Target
                 : moving
-                    ? _trailingFlight.GetPosition(player.transform.position, _travelDirection)
+                    ? _trailingFlight.GetPosition(
+                        player.transform.position, _travelDirection,
+                        cameraPosition)
                     : _observerFlight.GetPosition(
                         player.transform.position, _idleForwardDirection);
             float behaviorHeight = moving
                 ? _trailingFlight.Height
-                : _landingBehavior.IsActive || _restingBehavior.IsActive
-                    ? _height
-                    : _observerFlight.Height;
+                : _observerFlight.Height;
             float height = _combatObserver.IsActive
                 ? _combatObserver.ClampHeight(behaviorHeight)
                 : behaviorHeight;
+            if (_forestAwareness.IsInForest)
+            {
+                height = Mathf.Min(height, ForestMaximumHeight);
+            }
             horizontalPosition.y = GetGroundHeight(horizontalPosition) + height;
+            if (moving && !_combatObserver.IsActive)
+            {
+                horizontalPosition = _trailingFlight.AnticipateTerrain(
+                    cameraPosition, horizontalPosition);
+            }
             return horizontalPosition;
-        }
-        // Schedules an early destination change after an obstructed choice.
-        internal void RetrySoon()
-        {
-            _nextTargetTime = Mathf.Min(_nextTargetTime, Time.time + 0.5f);
         }
         // Selects the next destination immediately before the camera can stop.
         internal void AdvanceNow()
         {
             _nextTargetTime = Time.time;
         }
-        // Tracks continuous ObserverFlight time before allowing a landing.
-        internal void UpdateObserverLandingOpportunity(bool observing)
-        {
-            if (_landingBehavior.UpdateObserverState(observing))
-            {
-                AdvanceNow();
-            }
-        }
-        // Transfers a completed landing into a grounded resting session.
-        internal bool UpdateResting(
-            Vector3 cameraPosition, Vector3 target)
-        {
-            if (_landingBehavior.TryComplete(cameraPosition, target))
-            {
-                _restingBehavior.Begin();
-                return true;
-            }
-
-            if (_restingBehavior.Update())
-            {
-                BeginTakeoff(cameraPosition);
-                AdvanceNow();
-            }
-            return _restingBehavior.IsActive;
-        }
-
         // Applies the look policy owned by the current primary behavior.
         internal void UpdateLook(
             HuginnCamBehaviorState state, HuginnCamLook look,
             Transform cameraTransform, Vector3 playerFocus,
             Vector3 flightDirection)
         {
-            switch (state)
+            if (state == HuginnCamBehaviorState.CombatObserver)
             {
-                case HuginnCamBehaviorState.Resting:
-                    _restingBehavior.UpdateLook(
-                        look, cameraTransform, playerFocus);
-                    break;
-                case HuginnCamBehaviorState.Landing:
-                    look.UpdateLanding(
-                        cameraTransform, playerFocus, flightDirection);
-                    break;
-                case HuginnCamBehaviorState.Takeoff:
-                    look.UpdateHorizon(
-                        cameraTransform, _takeoffBehavior.Direction);
-                    break;
-                case HuginnCamBehaviorState.CombatObserver:
-                    look.UpdateFlightAware(
-                        cameraTransform,
-                        _combatObserver.GetFocus(playerFocus),
-                        flightDirection);
-                    break;
-                case HuginnCamBehaviorState.ObserverFlight:
-                    look.UpdateFlightAware(
-                        cameraTransform, playerFocus, flightDirection);
-                    break;
-                default:
-                    look.UpdateFlightAware(
-                        cameraTransform, playerFocus, flightDirection);
-                    break;
+                look.UpdateFlightAware(
+                    cameraTransform, _combatObserver.GetFocus(playerFocus),
+                    flightDirection);
+                return;
             }
+
+            look.UpdateFlightAware(
+                cameraTransform, playerFocus, flightDirection);
         }
 
         // Keeps the camera path outside the player's horizontal personal space.
@@ -197,9 +127,7 @@ namespace Landoria.HuginnCam
         // Applies the trailing half-space only during ordinary player travel.
         private Vector3 KeepBehindPlayer(Player player, Vector3 position)
         {
-            return _isMoving && !_combatObserver.IsActive &&
-                   !_landingBehavior.IsActive && !_restingBehavior.IsActive &&
-                   !_takeoffBehavior.IsActive
+            return _isMoving && !_combatObserver.IsActive
                 ? _trailingFlight.KeepBehind(
                     player.transform.position, _travelDirection, position)
                 : position;
@@ -291,46 +219,21 @@ namespace Landoria.HuginnCam
             return value;
         }
 
-        // Starts a smooth departure using the last known travel direction.
-        private void BeginTakeoff(Vector3 cameraPosition)
-        {
-            _landingBehavior.Cancel();
-            _takeoffBehavior.Begin(cameraPosition, _idleForwardDirection);
-        }
-
         // Chooses a new point and schedules the following choice.
         private void SelectTarget(Player player, bool moving)
         {
             _movingTarget = moving;
-            bool initialLanding = !_initialized;
-            _landingBehavior.SelectState(
-                moving, initialLanding, _combatObserver.IsActive);
             if (moving)
             {
                 _trailingFlight.SelectTarget();
             }
             else
             {
-                if (_landingBehavior.IsActive)
-                {
-                    _height = _landingBehavior.Height;
-                }
-                if (_landingBehavior.IsActive &&
-                    !_landingBehavior.TrySelectTarget(
-                    player, _observerFlight, _idleForwardDirection))
-                {
-                    _landingBehavior.Cancel();
-                    _observerFlight.SelectTarget(player.transform.position);
-                }
-                else if (!_landingBehavior.IsActive)
-                {
-                    _observerFlight.SelectTarget(player.transform.position);
-                }
+                _observerFlight.SelectTarget(player.transform.position);
             }
 
-            _nextTargetTime = _landingBehavior.IsActive
-                ? float.PositiveInfinity
-                : Time.time + (moving ? 0.5f : Random.Range(4f, 8f));
+            _nextTargetTime = Time.time +
+                              (moving ? 0.5f : Random.Range(4f, 8f));
             _initialized = true;
         }
 

@@ -11,6 +11,7 @@ namespace Landoria.HuginnCam
         private const float HeadHeight = 1.7f;
         private const float DirectionTurnSpeed = 0.75f;
         private const float DestinationAdvanceDistance = 1f;
+        private const float CatchUpSprintMultiplier = 1.5f;
         private Camera _camera;
         private AudioListener _listener;
         private AudioListener _originalListener;
@@ -20,20 +21,16 @@ namespace Landoria.HuginnCam
         private bool _poseInitialized;
         private readonly HuginnCamSpeed _speed = new HuginnCamSpeed();
         private readonly HuginnCamLook _look = new HuginnCamLook();
-        private readonly HuginnCamBehaviorController _behaviors =
-            new HuginnCamBehaviorController();
-        private readonly HuginnCamFreedomFlight _freedomFlight = new HuginnCamFreedomFlight();
+        private readonly HuginnCamBehaviorController _behaviors = new HuginnCamBehaviorController();
         private readonly HuginnCamAmbientCallScheduler _ambientCallScheduler = new HuginnCamAmbientCallScheduler();
-        private readonly HuginnCamObstacleAvoidance _obstacleAvoidance = new HuginnCamObstacleAvoidance();
         private readonly HuginnCamCatchUpFlight _catchUp = new HuginnCamCatchUpFlight();
         private readonly HuginnCamMainCamera _mainCamera = new HuginnCamMainCamera();
         private readonly HuginnCamBehaviorStateMachine _stateMachine = new HuginnCamBehaviorStateMachine();
+        private readonly HuginnCamPositionLogger _positionLogger = new HuginnCamPositionLogger();
         private readonly List<HuginnCamEffectMirror> _effectMirrors = new List<HuginnCamEffectMirror>();
         private static readonly Dictionary<Type, FieldInfo[]> SerializableFields = new Dictionary<Type, FieldInfo[]>();
         private static readonly HashSet<string> WarnedUnclassifiedComponents = new HashSet<string>();
         internal Camera Camera => _camera;
-        internal AudioListener Listener => _listener;
-        internal RenderTexture PreparedTarget => _offscreenTarget;
         // Clones the gameplay camera and optionally transfers audio listening to it.
         internal void Initialize(Camera sourceCamera, bool transferAudio = true)
         {
@@ -273,89 +270,27 @@ namespace Landoria.HuginnCam
             }
             Vector3 head = player.transform.position + Vector3.up * HeadHeight;
             Vector3 desired = _behaviors.GetTarget(player, _camera.transform.position);
-            _freedomFlight.Update(
-                player, _behaviors.IsPlayerMoving,
-                _behaviors.IsDangerActive || _behaviors.IsTakingOff,
-                _behaviors.TravelDirection,
-                _camera.transform.position,
-                _bodyDirection * _speed.Current,
-                ref desired);
-            _freedomFlight.HandleAudio(_audio);
-            if (_freedomFlight.CompletedThisFrame)
-            {
-                _catchUp.BeginForced();
-            }
             _ambientCallScheduler.Update(_audio);
-            if (_freedomFlight.TryTakeExitVelocity(out Vector3 exitVelocity) &&
-                exitVelocity.sqrMagnitude > 0.001f)
-            {
-                _bodyDirection = exitVelocity.normalized;
-                _speed.MatchCurrent(exitVelocity.magnitude);
-            }
             if (!_poseInitialized)
             {
                 _camera.transform.position = desired;
                 _look.Snap(_camera.transform, head);
                 _bodyDirection = player.transform.forward.normalized;
-                _stateMachine.Update(
-                    _behaviors, _freedomFlight, _catchUp,
-                    _obstacleAvoidance);
+                _stateMachine.Update(_behaviors, _catchUp);
                 _speed.Initialize(GetFlightProfile());
                 _poseInitialized = true;
+                _positionLogger.Update(player, _camera.transform.position);
                 return;
             }
-            bool retryDestination = _obstacleAvoidance.Prepare(
-                player, head, _camera.transform.position,
-                _behaviors.IsLanding, _behaviors.IsResting,
-                !_freedomFlight.IsHolding, ref desired);
-            if (retryDestination)
-            {
-                _behaviors.RetrySoon();
-            }
-            _stateMachine.Update(_behaviors, _freedomFlight, _catchUp, _obstacleAvoidance);
-            _behaviors.UpdateResting(
-                _camera.transform.position, desired);
-            _stateMachine.Update(_behaviors, _freedomFlight, _catchUp, _obstacleAvoidance);
-            _behaviors.UpdateObserverLandingOpportunity(
-                _stateMachine.Is(HuginnCamBehaviorState.ObserverFlight));
-            if (_stateMachine.Is(HuginnCamBehaviorState.FreedomFlight))
-            {
-                Vector3 next = _freedomFlight.Move(
-                    _camera.transform.position, desired);
-                _camera.transform.position = HuginnCamTerrain.ResolveMovement(
-                    _camera.transform.position, next, false);
-                if (_freedomFlight.FollowVelocity.sqrMagnitude > 0.001f)
-                {
-                    _bodyDirection = _freedomFlight.FollowVelocity.normalized;
-                    _speed.MatchCurrent(_freedomFlight.FollowVelocity.magnitude);
-                }
-            }
-            else if (!_stateMachine.Is(HuginnCamBehaviorState.Resting))
-            {
-                MoveCamera(player, ref desired);
-            }
-            if (!_freedomFlight.IsHolding &&
-                _obstacleAvoidance.ShouldRetryAfterMovement(
-                player, head, _camera.transform.position,
-                _behaviors.IsLanding || _behaviors.IsResting))
-            {
-                _behaviors.RetrySoon();
-            }
-            if (_stateMachine.Is(HuginnCamBehaviorState.FreedomFlight))
-            {
-                _freedomFlight.UpdateLook(
-                    _look, _camera.transform, _bodyDirection);
-            }
-            else
-            {
-                _behaviors.UpdateLook(
-                    _stateMachine.State, _look, _camera.transform, head,
-                    _bodyDirection);
-            }
+            _stateMachine.Update(_behaviors, _catchUp);
+            MoveCamera(player, ref desired);
+            _behaviors.UpdateLook(
+                _stateMachine.State, _look, _camera.transform, head,
+                _bodyDirection);
+            _positionLogger.Update(player, _camera.transform.position);
         }
         // Moves continuously at cruise speed and catches up only when far behind.
-        private void MoveCamera(
-            Player player, ref Vector3 desired)
+        private void MoveCamera(Player player, ref Vector3 desired)
         {
             Vector3 offset = desired - _camera.transform.position;
             if (offset.magnitude <= DestinationAdvanceDistance)
@@ -369,9 +304,8 @@ namespace Landoria.HuginnCam
                 : _bodyDirection;
             _catchUp.Update(
                 offset.magnitude,
-                !_behaviors.IsLanding && !_behaviors.IsDangerActive &&
-                !_behaviors.IsTakingOff &&
-                !_freedomFlight.IsActive && !_obstacleAvoidance.IsActive);
+                !_behaviors.IsDangerActive && !_behaviors.IsMobileDanger,
+                player.m_runSpeed * CatchUpSprintMultiplier);
             desired = _catchUp.TrackTarget(desired);
             offset = desired - _camera.transform.position;
             _bodyDirection = Vector3.RotateTowards(
@@ -381,20 +315,37 @@ namespace Landoria.HuginnCam
                 0f).normalized;
             float speed = _speed.Update(
                 offset.magnitude, GetFlightProfile());
+            speed = ClampTrailingSpeed(player, speed);
             Vector3 nextPosition = _camera.transform.position +
                                    _bodyDirection * speed * Time.deltaTime;
             nextPosition = _behaviors.ConstrainNormalFlight(
                 player, nextPosition);
             _camera.transform.position = HuginnCamTerrain.ResolveMovement(
-                _camera.transform.position, nextPosition, _behaviors.IsLanding);
+                _camera.transform.position, nextPosition);
         }
+
+        // Prevents residual catch-up momentum from exceeding the player's sprint speed.
+        private float ClampTrailingSpeed(Player player, float speed)
+        {
+            if (!_stateMachine.Is(HuginnCamBehaviorState.TrailingFlight))
+            {
+                return speed;
+            }
+
+            float clamped = Mathf.Min(speed, player.m_runSpeed);
+            if (clamped < speed)
+            {
+                _speed.MatchCurrent(clamped);
+            }
+
+            return clamped;
+        }
+
         // Returns the profile of the highest-priority active behavior.
         private HuginnCamFlightProfile GetFlightProfile()
         {
-            _stateMachine.Update(
-                _behaviors, _freedomFlight, _catchUp, _obstacleAvoidance);
-            return _stateMachine.GetProfile(
-                _behaviors, _freedomFlight, _catchUp, _obstacleAvoidance);
+            _stateMachine.Update(_behaviors, _catchUp);
+            return _stateMachine.GetProfile(_behaviors, _catchUp);
         }
     }
 }

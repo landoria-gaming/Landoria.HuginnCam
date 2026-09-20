@@ -7,31 +7,13 @@ namespace Landoria.HuginnCam
     {
         private const float CameraRadius = 0.1f;
         private const float TerrainClearance = 1f;
-        private const float AvoidanceClearance = 0.5f;
-        private const float SlopeSampleDistance = 1f;
-        private const float LandingSampleDistance = 0.75f;
-        private const float MinimumSignificantSlope = 0.28f;
-
-        // Detects terrain that requires an accelerated climbing maneuver.
-        internal static bool NeedsAvoidance(Vector3 current, Vector3 desired)
-        {
-            if (TryGetGroundHeight(current, out float groundHeight) &&
-                current.y - groundHeight < AvoidanceClearance)
-            {
-                return true;
-            }
-
-            Vector3 movement = desired - current;
-            float distance = movement.magnitude;
-            return distance >= 0.001f &&
-                   FindTerrainHit(current, movement.normalized, distance) < distance;
-        }
+        private const int LookAheadSamples = 8;
 
         // Prevents one camera movement from crossing a terrain collider.
         internal static Vector3 ResolveMovement(
-            Vector3 current, Vector3 desired, bool landing)
+            Vector3 current, Vector3 desired)
         {
-            float clearance = landing ? 0.2f : TerrainClearance;
+            float clearance = TerrainClearance;
             desired = KeepAbove(desired, clearance);
             Vector3 movement = desired - current;
             float distance = movement.magnitude;
@@ -51,72 +33,36 @@ namespace Landoria.HuginnCam
             return KeepAbove(desired, clearance);
         }
 
-        // Finds the horizontal downhill direction around one terrain position.
-        internal static bool TryGetDownhillDirection(
-            Vector3 position, out Vector3 direction)
+        // Raises a destination in advance of rising terrain along the flight path.
+        internal static Vector3 AnticipateRise(
+            Vector3 origin, Vector3 desired, float lookAhead,
+            float clearance)
         {
-            direction = Vector3.zero;
-            Vector3 right = position + Vector3.right * SlopeSampleDistance;
-            Vector3 left = position - Vector3.right * SlopeSampleDistance;
-            Vector3 forward = position + Vector3.forward * SlopeSampleDistance;
-            Vector3 back = position - Vector3.forward * SlopeSampleDistance;
-            if (TryGetGroundHeight(right, out float rightHeight) &&
-                TryGetGroundHeight(left, out float leftHeight) &&
-                TryGetGroundHeight(forward, out float forwardHeight) &&
-                TryGetGroundHeight(back, out float backHeight))
+            Vector3 horizontal = desired - origin;
+            horizontal.y = 0f;
+            float distance = Mathf.Min(horizontal.magnitude, lookAhead);
+            if (distance < 0.001f)
             {
-                Vector3 downhill = new Vector3(
-                    leftHeight - rightHeight, 0f, backHeight - forwardHeight);
-                if (downhill.magnitude >= MinimumSignificantSlope)
+                return desired;
+            }
+
+            Vector3 direction = horizontal.normalized;
+            float requiredHeight = desired.y;
+            for (int sample = 1; sample <= LookAheadSamples; sample++)
+            {
+                Vector3 point = origin + direction *
+                    (distance * sample / LookAheadSamples);
+                if (TryGetGroundHeight(point, out float groundHeight))
                 {
-                    direction = downhill.normalized;
-                    return true;
+                    requiredHeight = Mathf.Max(
+                        requiredHeight, groundHeight + clearance);
                 }
             }
 
-            return false;
+            desired.y = requiredHeight;
+            return desired;
         }
 
-        // Rejects terrain submerged by water at a proposed landing point.
-        internal static bool IsDryLandingPoint(Vector3 position)
-        {
-            if (!TryGetGroundHeight(position, out float groundHeight))
-            {
-                return false;
-            }
-
-            position.y = groundHeight;
-            float waterHeight = Floating.GetLiquidLevel(
-                position, 1f, LiquidType.Water);
-            return waterHeight <= -9999f || groundHeight >= waterHeight + 0.25f;
-        }
-
-        // Measures local landing unevenness; lower values represent flatter ground.
-        internal static bool TryGetLandingUnevenness(
-            Vector3 position, out float unevenness)
-        {
-            unevenness = float.MaxValue;
-            float[] heights = new float[5];
-            Vector3[] offsets =
-            {
-                Vector3.zero,
-                Vector3.right * LandingSampleDistance,
-                Vector3.left * LandingSampleDistance,
-                Vector3.forward * LandingSampleDistance,
-                Vector3.back * LandingSampleDistance
-            };
-            for (int index = 0; index < offsets.Length; index++)
-            {
-                if (!TryGetGroundHeight(position + offsets[index],
-                    out heights[index]))
-                {
-                    return false;
-                }
-            }
-
-            unevenness = Mathf.Max(heights) - Mathf.Min(heights);
-            return true;
-        }
 
         // Raises a camera position above the local terrain when necessary.
         private static Vector3 KeepAbove(Vector3 position, float clearance)

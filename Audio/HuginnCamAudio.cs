@@ -12,6 +12,7 @@ namespace Landoria.HuginnCam
     // Loads and plays embedded raven calls requested by Huginn behaviors.
     internal sealed class HuginnCamAudio : MonoBehaviour
     {
+        private static readonly int[] LoadedCalls = { 2, 3, 4, 6 };
         private readonly Dictionary<int, AudioClip> _clips =
             new Dictionary<int, AudioClip>();
         private AudioSource _source;
@@ -102,7 +103,7 @@ namespace Landoria.HuginnCam
         // Extracts embedded OGG files and lets Unity decode them asynchronously.
         private IEnumerator LoadClips()
         {
-            for (int number = 1; number <= 6; number++)
+            foreach (int number in LoadedCalls)
             {
                 string path = ExtractClip(number);
                 using (UnityWebRequest request =

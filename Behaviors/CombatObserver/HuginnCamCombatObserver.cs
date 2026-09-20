@@ -31,6 +31,7 @@ namespace Landoria.HuginnCam
         private float _lastHandledDamageReceivedTime = -1f;
 
         internal bool IsActive { get; private set; }
+        internal bool HasRecentDanger => Time.time < _dangerUntil;
         internal HuginnCamFlightProfile Profile => _retreating
             ? new HuginnCamFlightProfile(
                 RetreatMinimumSpeed, RetreatCruiseSpeed,
@@ -40,13 +41,14 @@ namespace Landoria.HuginnCam
                 ApproachMaximumSpeed, float.MaxValue, 0f, 0.35f);
 
         // Updates combat detection and switches between approach and retreat.
-        internal void Update(Player player, Vector3 cameraPosition)
+        internal void Update(
+            Player player, Vector3 cameraPosition, bool moving)
         {
             bool receivedDamage = UpdateDamageReceived();
             bool dealtDamage = UpdateDamageDealt();
             UpdateOpponent(player);
             bool wasActive = IsActive;
-            IsActive = Time.time < _dangerUntil;
+            IsActive = !moving && Time.time < _dangerUntil;
             if (!IsActive)
             {
                 _retreating = false;
