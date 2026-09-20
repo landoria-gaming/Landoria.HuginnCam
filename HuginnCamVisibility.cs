@@ -43,7 +43,7 @@ namespace Landoria.HuginnCam
         internal static bool IsOpenForOverhead(Player player, Vector3 cameraPosition)
         {
             Vector3 head = player.transform.position + Vector3.up * 1.7f;
-            Vector3 overhead = player.transform.position + Vector3.up * 6f;
+            Vector3 overhead = player.transform.position + Vector3.up * 10f;
             if (!HasClearSight(player, head, overhead) ||
                 !HasClearSight(player, cameraPosition, overhead))
             {

@@ -34,6 +34,14 @@ namespace Landoria.HuginnCam
             }
         }
 
+        // Faces downhill during landing without looking back at the player.
+        internal void UpdateLanding(Transform cameraTransform, Vector3 fallback)
+        {
+            Vector3 direction = HuginnCamTerrain.GetDownhillDirection(
+                cameraTransform.position, fallback);
+            UpdateHorizon(cameraTransform, direction);
+        }
+
         // Smoothly applies one normalized look direction.
         private void UpdateDirection(Transform cameraTransform, Vector3 direction)
         {

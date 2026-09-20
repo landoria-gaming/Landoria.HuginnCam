@@ -5,10 +5,12 @@ namespace Landoria.HuginnCam
     // Occasionally holds Huginn above a moving player while facing the horizon.
     internal sealed class HuginnCamOverwatch
     {
-        private const float HeightAbovePlayer = 6f;
+        private const float HeightAbovePlayer = 10f;
         private const float ArrivalDistance = 0.75f;
         private const float OpenAreaOpportunityChance = 0.8f;
         private const float MinimumRepeatDelay = 60f;
+        private const float MaximumApproachSpeed = 12f;
+        private const float MaximumNormalTrailingDistance = 6f;
         private Vector3 _followVelocity;
         private float _nextOpportunityTime;
         private float _holdEndTime;
@@ -23,21 +25,19 @@ namespace Landoria.HuginnCam
 
         // Replaces the normal destination during an active overhead visit.
         internal void Update(
-            Player player, bool moving, Vector3 cameraPosition,
+            Player player, bool moving, Vector3 travelDirection,
+            Vector3 cameraPosition,
             Vector3 incomingVelocity, ref Vector3 target)
         {
             StartedThisFrame = false;
             ArrivedThisFrame = false;
-            if (!moving)
-            {
-                Cancel();
-                return;
-            }
-
             InitializeSchedule();
-            if (!IsActive && Time.time >= _nextOpportunityTime)
+            bool lagging = IsBehindMovingZone(
+                player, cameraPosition, travelDirection);
+            if (!IsActive && moving && lagging &&
+                Time.time >= _nextOpportunityTime)
             {
-                TryStart(player, cameraPosition);
+                TryStart(player, cameraPosition, incomingVelocity);
             }
 
             if (!IsActive)
@@ -50,7 +50,6 @@ namespace Landoria.HuginnCam
             {
                 IsHolding = true;
                 ArrivedThisFrame = true;
-                _followVelocity = incomingVelocity;
                 _holdEndTime = Time.time + Random.Range(3f, 6f);
             }
 
@@ -60,11 +59,37 @@ namespace Landoria.HuginnCam
             }
         }
 
-        // Smoothly follows the moving player while Huginn holds overhead.
-        internal Vector3 Follow(Vector3 current, Vector3 target)
+        // Detects when Huginn has fallen behind the normal moving-camera box.
+        private static bool IsBehindMovingZone(
+            Player player, Vector3 cameraPosition, Vector3 travelDirection)
         {
-            return Vector3.SmoothDamp(
-                current, target, ref _followVelocity, 0.75f);
+            Vector3 offset = cameraPosition - player.transform.position;
+            offset.y = 0f;
+            travelDirection.y = 0f;
+            if (travelDirection.sqrMagnitude < 0.001f)
+            {
+                return false;
+            }
+
+            float trailingDistance = -Vector3.Dot(
+                offset, travelDirection.normalized);
+            return trailingDistance > MaximumNormalTrailingDistance;
+        }
+
+        // Approaches smoothly, then stays horizontally above the moving player.
+        internal Vector3 Move(Vector3 current, Vector3 target)
+        {
+            float smoothTime = IsHolding ? 0.2f : 0.65f;
+            Vector3 next = Vector3.SmoothDamp(
+                current, target, ref _followVelocity,
+                smoothTime, MaximumApproachSpeed);
+            if (IsHolding)
+            {
+                next.x = target.x;
+                next.z = target.z;
+            }
+
+            return next;
         }
 
         // Returns the final hover velocity once when normal travel resumes.
@@ -93,7 +118,8 @@ namespace Landoria.HuginnCam
         }
 
         // Starts an overhead visit or schedules another random attempt.
-        private void TryStart(Player player, Vector3 cameraPosition)
+        private void TryStart(
+            Player player, Vector3 cameraPosition, Vector3 incomingVelocity)
         {
             bool openArea = HuginnCamVisibility.IsOpenForOverhead(
                 player, cameraPosition);
@@ -102,7 +128,7 @@ namespace Landoria.HuginnCam
                 IsActive = true;
                 IsHolding = false;
                 StartedThisFrame = true;
-                _followVelocity = Vector3.zero;
+                _followVelocity = incomingVelocity;
                 return;
             }
 
@@ -116,15 +142,6 @@ namespace Landoria.HuginnCam
             IsActive = false;
             IsHolding = false;
             ScheduleRepeatOpportunity();
-        }
-
-        // Cancels an overhead visit when the player stops travelling.
-        private void Cancel()
-        {
-            if (IsActive)
-            {
-                Complete();
-            }
         }
 
         // Chooses when Huginn may next attempt an overhead visit.

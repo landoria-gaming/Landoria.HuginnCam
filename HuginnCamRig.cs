@@ -31,7 +31,6 @@ namespace Landoria.HuginnCam
         internal Camera Camera => _camera;
         internal AudioListener Listener => _listener;
         internal RenderTexture PreparedTarget => _offscreenTarget;
-
         // Clones the gameplay camera and optionally transfers audio listening to it.
         internal void Initialize(Camera sourceCamera, bool transferAudio = true)
         {
@@ -46,15 +45,13 @@ namespace Landoria.HuginnCam
             CopyVisualEffectStack(sourceCamera, cameraObject);
             if (transferAudio)
             {
-                _originalListener = sourceCamera.GetComponent<AudioListener>();
+                _originalListener = HuginnCamAudio.FindActiveListener(sourceCamera);
                 if (_originalListener != null)
                 {
                     _originalListener.enabled = false;
                 }
-
                 _listener = cameraObject.AddComponent<AudioListener>();
             }
-
             UpdatePose();
         }
         // Displays the Huginn camera directly on the player's screen.
@@ -75,13 +72,11 @@ namespace Landoria.HuginnCam
                     target.AddComponent<FlareLayer>();
                     continue;
                 }
-
                 if (source is PostProcessingBehaviour)
                 {
                     CopyPostProcessing(sourceCamera, target);
                     continue;
                 }
-
                 string typeName = source.GetType().FullName;
                 if (!IsMirroredVisualEffect(typeName))
                 {
@@ -287,6 +282,7 @@ namespace Landoria.HuginnCam
             Vector3 desired = _wander.GetTarget(player);
             _overwatch.Update(
                 player, _wander.IsPlayerMoving,
+                _wander.TravelDirection,
                 _camera.transform.position,
                 _movementDirection * _speed.Current,
                 ref desired);
@@ -318,9 +314,9 @@ namespace Landoria.HuginnCam
 
             bool perched = _wander.UpdatePerch(
                 _camera.transform.position, desired);
-            if (_overwatch.IsHolding)
+            if (_overwatch.IsActive)
             {
-                Vector3 next = _overwatch.Follow(
+                Vector3 next = _overwatch.Move(
                     _camera.transform.position, desired);
                 _camera.transform.position = HuginnCamTerrain.ResolveMovement(
                     _camera.transform.position, next, false);
@@ -341,10 +337,14 @@ namespace Landoria.HuginnCam
                 _wander.RetrySoon();
             }
 
-            if (_overwatch.IsHolding)
+            if (_overwatch.IsActive)
             {
                 _look.UpdateHorizon(
                     _camera.transform, player.transform.forward);
+            }
+            else if (_wander.IsLanding)
+            {
+                _look.UpdateLanding(_camera.transform, _movementDirection);
             }
             else
             {

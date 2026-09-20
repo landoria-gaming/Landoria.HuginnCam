@@ -8,6 +8,7 @@ namespace Landoria.HuginnCam
         private const float CameraRadius = 0.1f;
         private const float TerrainClearance = 1f;
         private const float AvoidanceClearance = 1.5f;
+        private const float SlopeSampleDistance = 1f;
 
         // Detects terrain that requires an accelerated climbing maneuver.
         internal static bool NeedsAvoidance(Vector3 current, Vector3 desired)
@@ -46,6 +47,33 @@ namespace Landoria.HuginnCam
             }
 
             return KeepAbove(desired, clearance);
+        }
+
+        // Finds the horizontal downhill direction around one terrain position.
+        internal static Vector3 GetDownhillDirection(
+            Vector3 position, Vector3 fallback)
+        {
+            Vector3 right = position + Vector3.right * SlopeSampleDistance;
+            Vector3 left = position - Vector3.right * SlopeSampleDistance;
+            Vector3 forward = position + Vector3.forward * SlopeSampleDistance;
+            Vector3 back = position - Vector3.forward * SlopeSampleDistance;
+            if (TryGetGroundHeight(right, out float rightHeight) &&
+                TryGetGroundHeight(left, out float leftHeight) &&
+                TryGetGroundHeight(forward, out float forwardHeight) &&
+                TryGetGroundHeight(back, out float backHeight))
+            {
+                Vector3 downhill = new Vector3(
+                    leftHeight - rightHeight, 0f, backHeight - forwardHeight);
+                if (downhill.sqrMagnitude > 0.001f)
+                {
+                    return downhill.normalized;
+                }
+            }
+
+            fallback.y = 0f;
+            return fallback.sqrMagnitude > 0.001f
+                ? fallback.normalized
+                : Vector3.forward;
         }
 
         // Raises a camera position above the local terrain when necessary.

@@ -2,6 +2,7 @@ using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using Landoria.Shared;
+using HarmonyLib;
 using UnityEngine;
 
 namespace Landoria.HuginnCam
@@ -15,6 +16,7 @@ namespace Landoria.HuginnCam
         private const string PluginVersion = "1.0.0";
         private HuginnCamController _cameraController;
         private RecordingController _recordingController;
+        private Harmony _harmony;
 
         internal static ManualLogSource Log { get; private set; }
 
@@ -24,6 +26,8 @@ namespace Landoria.HuginnCam
             Log = Logger;
             Logger.LogInfo($"AssemblyVersion: {GetType().Assembly.GetName().Version}.");
             Preference.Initialize(Config);
+            _harmony = new Harmony(PluginGuid);
+            _harmony.PatchAll();
             ConfigWatcher.Initialize(
                 Config,
                 Logger,
@@ -113,6 +117,8 @@ namespace Landoria.HuginnCam
         private void OnDestroy()
         {
             ConfigWatcher.Dispose();
+            _harmony?.UnpatchSelf();
+            _harmony = null;
             _recordingController?.Shutdown();
             _recordingController = null;
             _cameraController?.Shutdown();

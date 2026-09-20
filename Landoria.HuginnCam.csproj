@@ -28,6 +28,7 @@
   <ItemGroup>
     <Reference Include="System" /><Reference Include="System.Core" />
     <Reference Include="BepInEx"><HintPath>$(BepInExPath)\core\BepInEx.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(BepInExPath)\core\0Harmony.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_valheim"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\assembly_valheim.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_utils"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\assembly_utils.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_postprocessing"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\assembly_postprocessing.dll</HintPath><Private>false</Private></Reference>
@@ -59,6 +60,7 @@
     <Compile Include="HuginnCamController.cs" />
     <Compile Include="HuginnCamAudio.cs" />
     <Compile Include="HuginnCamEffectMirror.cs" />
+    <Compile Include="HuginnCamFootstepPatch.cs" />
     <Compile Include="HuginnCamLook.cs" />
     <Compile Include="HuginnCamOverwatch.cs" />
     <Compile Include="HuginnCamSpeed.cs" />

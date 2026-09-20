@@ -14,6 +14,7 @@ namespace Landoria.HuginnCam
         private const float MaximumIdleHeight = 3f;
         private const float LandingHeight = 0.2f;
         private const float LandingChance = 0.2f;
+        private const float LandingAfterTravelChance = 0.75f;
         private const float LandingArrivalDistance = 0.3f;
         private const float MinimumMovingDistance = 0f;
         private const float MaximumMovingDistance = 6f;
@@ -21,6 +22,7 @@ namespace Landoria.HuginnCam
         private const float MinimumIdleDistance = 3f;
         private const float MaximumIdleDistance = 10f;
         private const float MinimumIdleHorizontalDistance = 2f;
+        private const float MinimumLandingHorizontalDistance = 4f;
         private float _distance;
         private float _height;
         private float _lateral;
@@ -44,6 +46,7 @@ namespace Landoria.HuginnCam
 
         internal bool IsLanding => _landing;
         internal bool IsPlayerMoving => _isMoving;
+        internal Vector3 TravelDirection => _travelDirection;
 
         // Returns the current wandering destination in world space.
         internal Vector3 GetTarget(Player player)
@@ -203,9 +206,12 @@ namespace Landoria.HuginnCam
         // Chooses a new point and schedules the following choice.
         private void SelectTarget(bool moving)
         {
+            bool stoppedAfterTravel = _initialized && _movingTarget && !moving;
             _movingTarget = moving;
             _landing = !moving && _initialized && !_landing &&
-                       Random.value < LandingChance;
+                       Random.value < (stoppedAfterTravel
+                           ? LandingAfterTravelChance
+                           : LandingChance);
             _perched = false;
             _height = _landing
                 ? LandingHeight
@@ -220,12 +226,33 @@ namespace Landoria.HuginnCam
             else
             {
                 SelectIdleCoordinates();
+                if (_landing)
+                {
+                    KeepLandingCoordinatesOutsidePlayer();
+                }
             }
 
             _nextTargetTime = _landing
                 ? float.PositiveInfinity
                 : Time.time + Random.Range(4f, 8f);
             _initialized = true;
+        }
+
+        // Pushes a landing target outside Huginn's cautious personal radius.
+        private void KeepLandingCoordinatesOutsidePlayer()
+        {
+            Vector2 coordinates = new Vector2(_idleLateral, _idleLongitudinal);
+            if (coordinates.magnitude >= MinimumLandingHorizontalDistance)
+            {
+                return;
+            }
+
+            Vector2 direction = coordinates.sqrMagnitude > 0.001f
+                ? coordinates.normalized
+                : Vector2.up;
+            coordinates = direction * MinimumLandingHorizontalDistance;
+            _idleLateral = coordinates.x;
+            _idleLongitudinal = coordinates.y;
         }
 
         // Changes only one horizontal idle axis for each new destination.

@@ -54,6 +54,7 @@ namespace Landoria.HuginnCam
                 _cameraRig.BeginPreview();
                 _cameraRig.GetComponentInChildren<HuginnCamAudio>()
                     .PlayActivationCall();
+                HuginnCamFootstepPatch.Muted = true;
                 _interface.Hide();
                 Notify("Huginn Cam enabled.");
             }
@@ -82,6 +83,7 @@ namespace Landoria.HuginnCam
             }
 
             _interface.Restore();
+            HuginnCamFootstepPatch.Muted = false;
             Notify("Huginn Cam disabled.");
         }
 

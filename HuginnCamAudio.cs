@@ -21,6 +21,29 @@ namespace Landoria.HuginnCam
         private int _pendingCall;
         private bool _wasEnabled;
 
+        // Finds Valheim's active listener even when it is outside Camera.main.
+        internal static AudioListener FindActiveListener(Camera gameplayCamera)
+        {
+            AudioListener listener = gameplayCamera.GetComponent<AudioListener>() ??
+                                     gameplayCamera.GetComponentInParent<AudioListener>();
+            if (listener != null)
+            {
+                return listener;
+            }
+
+            AudioListener[] listeners = FindObjectsByType<AudioListener>(
+                FindObjectsSortMode.None);
+            foreach (AudioListener candidate in listeners)
+            {
+                if (candidate.enabled && candidate.gameObject.activeInHierarchy)
+                {
+                    return candidate;
+                }
+            }
+
+            return listeners.Length > 0 ? listeners[0] : null;
+        }
+
         // Creates the non-spatial source and begins loading all embedded calls.
         internal void Initialize()
         {
@@ -28,6 +51,7 @@ namespace Landoria.HuginnCam
             _source.playOnAwake = false;
             _source.loop = false;
             _source.spatialBlend = 0f;
+            _source.volume = 0.35f;
             _wasEnabled = Preference.RavenCallsEnabled;
             ScheduleRegularCall();
             StartCoroutine(LoadClips());
