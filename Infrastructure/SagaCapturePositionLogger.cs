@@ -10,7 +10,7 @@ namespace Landoria.SagaCapture
         // Writes horizontal coordinates, vertical offset, and horizontal distance.
         internal void Update(Player player, Vector3 cameraPosition)
         {
-            if (Time.time < _nextLogTime)
+            if (!Preference.DebugLogs || Time.time < _nextLogTime)
             {
                 return;
             }

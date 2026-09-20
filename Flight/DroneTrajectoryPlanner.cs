@@ -41,7 +41,8 @@ namespace Landoria.SagaCapture
 
         // Reuses one plan for 100 ms before simulating routes again.
         internal Vector3 Plan(
-            Vector3 origin, Vector3 desired, Vector3 probeTarget, float speed,
+            Vector3 origin, Vector3 desired, Vector3 probeTarget,
+            Vector3 velocity,
             float terrainClearance, bool useReactiveObstacleAvoidance)
         {
             if (_initialized && Time.time < _nextRefreshTime)
@@ -50,7 +51,7 @@ namespace Landoria.SagaCapture
             }
 
             float lookAhead = Mathf.Max(
-                MinimumLookAhead, speed * LookAheadSeconds);
+                MinimumLookAhead, velocity.magnitude * LookAheadSeconds);
             float requiredLift = GetRequiredTerrainLift(
                 origin, probeTarget, lookAhead, terrainClearance);
             float smoothTime = requiredLift > _smoothedTerrainLift
@@ -64,10 +65,23 @@ namespace Landoria.SagaCapture
                 ref _terrainLiftVelocity, smoothTime,
                 Mathf.Infinity, elapsed);
             Vector3 target = desired + Vector3.up * _smoothedTerrainLift;
+            Vector3 routeTarget = target;
+            Vector3 reactiveProbe = probeTarget;
+            if (useReactiveObstacleAvoidance)
+            {
+                reactiveProbe = GetReactiveProbe(
+                    origin, probeTarget, velocity, lookAhead,
+                    out bool followsMomentum);
+                if (followsMomentum)
+                {
+                    routeTarget = reactiveProbe;
+                    routeTarget.y = target.y;
+                }
+            }
             _plannedTarget = useReactiveObstacleAvoidance
                 ? ChooseObstacleRoute(
-                    origin, target, probeTarget,
-                    lookAhead, terrainClearance)
+                    origin, routeTarget, reactiveProbe,
+                    target, lookAhead, terrainClearance)
                 : target;
             _lastRefreshTime = Time.time;
             _nextRefreshTime = Time.time + RefreshInterval;
@@ -75,10 +89,31 @@ namespace Landoria.SagaCapture
             return _plannedTarget;
         }
 
+        // Prioritizes the path the moving drone cannot instantly leave.
+        private static Vector3 GetReactiveProbe(
+            Vector3 origin, Vector3 desiredProbe, Vector3 velocity,
+            float lookAhead, out bool followsMomentum)
+        {
+            followsMomentum = false;
+            if (velocity.sqrMagnitude < 0.04f)
+            {
+                return desiredProbe;
+            }
+
+            Vector3 momentumProbe = origin + velocity.normalized * lookAhead;
+            if (!HasObstacle(origin, momentumProbe, lookAhead))
+            {
+                return desiredProbe;
+            }
+
+            followsMomentum = true;
+            return momentumProbe;
+        }
+
         // Chooses the first clear lateral route or keeps the direct route.
         private Vector3 ChooseObstacleRoute(
             Vector3 origin, Vector3 target, Vector3 probeTarget,
-            float lookAhead,
+            Vector3 fallbackTarget, float lookAhead,
             float terrainClearance)
         {
             if (!TryGetObstacle(
@@ -130,7 +165,7 @@ namespace Landoria.SagaCapture
             }
 
             LogAvoidance(obstacle, "no clear detour; continuing direct");
-            return target;
+            return fallbackTarget;
         }
 
         // Keeps one lateral side while passing the same obstacle.

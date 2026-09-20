@@ -6,6 +6,7 @@ namespace Landoria.SagaCapture
     internal sealed class DroneFlightController
     {
         private const float OrbitSpeed = 0.5f;
+        private const float OrbitEntryMaximumDroneSpeed = 1f;
         private const float MinimumOrbitRadius = 2f;
         private const float TrailingEntryDistance = 5f;
         private const float OrbitReturnDistance = 4f;
@@ -21,12 +22,17 @@ namespace Landoria.SagaCapture
         private const float FrontOrbitSpeedMultiplier = 0.5f;
         private const float RearOrbitSpeedMultiplier = 1.5f;
         private const float OrbitAnticipationSeconds = 2f;
+        private const float OrbitMotionLeadSeconds = 1.5f;
+        private const float OrbitRadiusSmoothTime = 3f;
+        private const float MaximumOrbitRadialSpeed = 0.5f;
         private const int OrbitTerrainSamples = 36;
         private const int OrbitRadiusCandidates = 9;
         private DroneFlightMode _mode;
         private Vector3 _travelDirection = Vector3.forward;
         private float _orbitAngle;
         private float _orbitRadius;
+        private float _preferredOrbitRadius;
+        private float _orbitRadiusVelocity;
         private float _orbitSlopeX;
         private float _orbitSlopeZ;
         private bool _orbitPlaneInitialized;
@@ -57,12 +63,15 @@ namespace Landoria.SagaCapture
         // Selects a mode and returns its desired world position and speed.
         internal Vector3 Update(
             Player player, Vector3 dronePosition,
-            DroneEnvironment environment, out float targetSpeed)
+            float droneSpeed, DroneEnvironment environment,
+            out float targetSpeed)
         {
             Vector3 playerPosition = player.transform.position;
             Vector3 playerVelocity = Flatten(player.GetVelocity());
             UpdateTravelDirection(player, playerVelocity);
-            SelectMode(playerPosition, dronePosition, playerVelocity.magnitude);
+            SelectMode(
+                playerPosition, dronePosition,
+                playerVelocity.magnitude, droneSpeed);
             if (_mode == DroneFlightMode.TrailingFlight)
             {
                 targetSpeed = GetTrailingSpeed(player, dronePosition);
@@ -73,13 +82,14 @@ namespace Landoria.SagaCapture
                 return target;
             }
 
-            targetSpeed = OrbitSpeed;
-            return GetOrbitTarget(player, playerPosition, environment);
+            return GetOrbitTarget(
+                player, playerPosition, environment, out targetSpeed);
         }
 
         // Chooses a stable mode with distance hysteresis.
         private void SelectMode(
-            Vector3 playerPosition, Vector3 dronePosition, float playerSpeed)
+            Vector3 playerPosition, Vector3 dronePosition,
+            float playerSpeed, float droneSpeed)
         {
             float distance = Flatten(
                 dronePosition - playerPosition).magnitude;
@@ -99,7 +109,8 @@ namespace Landoria.SagaCapture
             }
             else if (_mode == DroneFlightMode.TrailingFlight &&
                      distance <= OrbitReturnDistance &&
-                     playerSpeed <= OrbitSpeed)
+                     playerSpeed <= OrbitSpeed &&
+                     droneSpeed <= OrbitEntryMaximumDroneSpeed)
             {
                 next = DroneFlightMode.OrbitFlight;
             }
@@ -150,6 +161,8 @@ namespace Landoria.SagaCapture
             Vector3 radial = Flatten(dronePosition - playerPosition);
             _orbitAngle = Mathf.Atan2(radial.z, radial.x);
             _orbitRadius = Mathf.Max(MinimumOrbitRadius, radial.magnitude);
+            _preferredOrbitRadius = _orbitRadius;
+            _orbitRadiusVelocity = 0f;
             _orbitPlaneInitialized = false;
         }
 
@@ -192,11 +205,14 @@ namespace Landoria.SagaCapture
         // Advances a slowly changing circular orbit around the player.
         private Vector3 GetOrbitTarget(
             Player player, Vector3 playerPosition,
-            DroneEnvironment environment)
+            DroneEnvironment environment, out float targetSpeed)
         {
-            _orbitRadius = Mathf.Clamp(
-                _orbitRadius, MinimumOrbitRadius,
+            float permittedRadius = Mathf.Clamp(
+                _preferredOrbitRadius, MinimumOrbitRadius,
                 environment.MaximumOrbitRadius);
+            _orbitRadius = Mathf.SmoothDamp(
+                _orbitRadius, permittedRadius, ref _orbitRadiusVelocity,
+                OrbitRadiusSmoothTime, MaximumOrbitRadialSpeed);
             float radius = _orbitRadius;
             if (!_orbitPlaneInitialized)
             {
@@ -210,8 +226,9 @@ namespace Landoria.SagaCapture
             float orbitSpeedMultiplier = Mathf.Lerp(
                 RearOrbitSpeedMultiplier, FrontOrbitSpeedMultiplier,
                 frontAmount);
-            _orbitAngle += _orbitDirection * OrbitSpeed *
-                           orbitSpeedMultiplier /
+            float orbitLinearSpeed = OrbitSpeed * orbitSpeedMultiplier;
+            targetSpeed = orbitLinearSpeed;
+            _orbitAngle += _orbitDirection * orbitLinearSpeed /
                            Mathf.Max(radius, 1f) * Time.deltaTime;
             Vector3 target = playerPosition + radial * radius;
             float closeBlend = Mathf.SmoothStep(
@@ -235,7 +252,8 @@ namespace Landoria.SagaCapture
                 ground + maximumHeight);
             Vector3 tangent = new Vector3(-radial.z, 0f, radial.x) *
                               _orbitDirection;
-            TrajectoryProbeTarget = target + tangent * OrbitSpeed *
+            target += tangent * orbitLinearSpeed * OrbitMotionLeadSeconds;
+            TrajectoryProbeTarget = target + tangent * orbitLinearSpeed *
                                     OrbitAnticipationSeconds;
             return target;
         }
@@ -246,7 +264,7 @@ namespace Landoria.SagaCapture
             DroneEnvironment environment)
         {
             float preferredRadius = Mathf.Clamp(
-                _orbitRadius, MinimumOrbitRadius,
+                _preferredOrbitRadius, MinimumOrbitRadius,
                 environment.MaximumOrbitRadius);
             float headHeight = player.m_eye != null
                 ? player.m_eye.position.y
@@ -268,7 +286,7 @@ namespace Landoria.SagaCapture
                 {
                     bestObstacles = obstacles;
                     bestDistance = distance;
-                    _orbitRadius = radius;
+                    _preferredOrbitRadius = radius;
                     _orbitSlopeX = slope.x;
                     _orbitSlopeZ = slope.y;
                 }

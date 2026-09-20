@@ -14,11 +14,15 @@ namespace Landoria.SagaCapture
             new SagaCaptureMainCamera();
         private readonly SagaCapturePositionLogger _positionLogger =
             new SagaCapturePositionLogger();
+        private readonly OrbitMotionLogger _orbitMotionLogger =
+            new OrbitMotionLogger();
         private readonly DroneEnvironment _environment = new DroneEnvironment();
         private readonly DroneFlightController _flight =
             new DroneFlightController();
         private readonly DroneTrajectoryPlanner _trajectory =
             new DroneTrajectoryPlanner();
+        private readonly TrailingRoutePlanner _trailingRoute =
+            new TrailingRoutePlanner();
         private readonly DroneMotion _motion = new DroneMotion();
         private readonly DroneLook _look = new DroneLook();
         private readonly DroneFraming _framing = new DroneFraming();
@@ -135,11 +139,25 @@ namespace Landoria.SagaCapture
             Vector3 position = _camera.transform.position;
             _environment.Update(position);
             Vector3 desired = _flight.Update(
-                player, position, _environment, out float targetSpeed);
+                player, position, _motion.Speed,
+                _environment, out float targetSpeed);
             Vector3 probeTarget = _flight.TrajectoryProbeTarget;
+            bool recoveringFraming = false;
+            if (_flight.Mode == DroneFlightMode.TrailingFlight)
+            {
+                desired = _trailingRoute.Plan(
+                    position, desired, _motion.Velocity,
+                    player.GetVelocity());
+                probeTarget = desired;
+            }
+            else
+            {
+                _trailingRoute.Reset();
+            }
             Vector3 focus = GetPlayerFocus(player);
             if (!_framing.IsVisible(_camera, focus))
             {
+                recoveringFraming = true;
                 desired = _framing.GetRecoveryTarget(
                     player, position);
                 probeTarget = desired;
@@ -151,9 +169,20 @@ namespace Landoria.SagaCapture
                     DroneTrajectoryPlanner.CameraRadius);
             desired = _trajectory.Plan(
                 position, desired, probeTarget,
-                _motion.Speed, terrainClearance,
+                _motion.Velocity, terrainClearance,
                 _flight.Mode != DroneFlightMode.OrbitFlight);
-            Vector3 next = _motion.Step(position, desired, targetSpeed);
+            Vector3 next = _flight.Mode == DroneFlightMode.OrbitFlight &&
+                           !recoveringFraming
+                ? _motion.StepOrbit(
+                    position, desired, probeTarget - desired, targetSpeed)
+                : _motion.Step(position, desired, targetSpeed);
+            if (_flight.Mode == DroneFlightMode.OrbitFlight)
+            {
+                _orbitMotionLogger.Update(
+                    player.transform.position, position,
+                    desired, probeTarget,
+                    _motion.Velocity, _motion.Acceleration);
+            }
             _camera.transform.position = KeepAboveTerrain(
                 next, terrainClearance);
             _look.Update(_camera.transform, focus);

@@ -10,7 +10,8 @@ namespace Landoria.SagaCapture
         internal static void LogSnapshot(
             string phase, Camera source, Camera sagaCamera)
         {
-            if (source == null || sagaCamera == null)
+            if (!Preference.DebugLogs ||
+                source == null || sagaCamera == null)
             {
                 return;
             }

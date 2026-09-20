@@ -51,6 +51,7 @@
     <Compile Include="Configuration\Preference.cs" />
     <Compile Include="Infrastructure\SagaCapturePlugin.cs" />
     <Compile Include="Infrastructure\SagaCapturePositionLogger.cs" />
+    <Compile Include="Infrastructure\OrbitMotionLogger.cs" />
     <Compile Include="Camera\SagaCaptureAudioListener.cs" />
     <Compile Include="Camera\SagaCaptureCameraLogger.cs" />
     <Compile Include="Camera\SagaCaptureController.cs" />
@@ -67,6 +68,7 @@
     <Compile Include="Flight\DroneLook.cs" />
     <Compile Include="Flight\DroneMotion.cs" />
     <Compile Include="Flight\DroneTrajectoryPlanner.cs" />
+    <Compile Include="Flight\TrailingRoutePlanner.cs" />
     <Compile Include="Recording\RecordingController.cs" />
     <Compile Include="Patches\SagaCaptureMenuPatch.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
