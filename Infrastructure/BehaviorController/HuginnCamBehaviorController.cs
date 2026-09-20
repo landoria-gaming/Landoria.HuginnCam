@@ -8,6 +8,7 @@ namespace Landoria.HuginnCam
         private const float StationaryRadius = 3f;
         private const float MovementProgressDistance = 1f;
         private const float StationaryDelay = 3f;
+        private const float InitialMovementSpeed = 0.5f;
         private const float MinimumIdleHorizontalDistance = 2f;
         private float _height;
         private float _nextTargetTime;
@@ -27,13 +28,18 @@ namespace Landoria.HuginnCam
         private readonly HuginnCamLanding _landingBehavior = new HuginnCamLanding();
         private readonly HuginnCamResting _restingBehavior = new HuginnCamResting();
         private readonly HuginnCamTrailingFlight _trailingFlight = new HuginnCamTrailingFlight();
+        private readonly HuginnCamTakeoff _takeoffBehavior =
+            new HuginnCamTakeoff();
         internal bool IsLanding => _landingBehavior.IsActive;
         internal bool IsResting => _restingBehavior.IsActive;
         internal bool IsPlayerMoving => _isMoving;
         internal bool IsDangerActive => _combatObserver.IsActive;
+        internal bool IsTakingOff => _takeoffBehavior.IsActive;
         internal Vector3 TravelDirection => _travelDirection;
         internal HuginnCamFlightProfile Profile => _combatObserver.IsActive
             ? _combatObserver.Profile
+            : _takeoffBehavior.IsActive
+                ? _takeoffBehavior.Profile
             : _restingBehavior.IsActive
                 ? _restingBehavior.Profile
                 : _landingBehavior.IsActive
@@ -54,6 +60,7 @@ namespace Landoria.HuginnCam
             if (_restingBehavior.CancelFor(
                 moving, _combatObserver.IsActive))
             {
+                BeginTakeoff(cameraPosition);
                 AdvanceNow();
             }
             if (_landingBehavior.UpdateSafeIdleState(
@@ -65,6 +72,15 @@ namespace Landoria.HuginnCam
             if (!_initialized || moving != _movingTarget || Time.time >= _nextTargetTime)
             {
                 SelectTarget(player, moving);
+            }
+            if (_takeoffBehavior.IsActive)
+            {
+                Vector3 takeoffTarget = _takeoffBehavior.Update(cameraPosition);
+                if (_takeoffBehavior.IsActive)
+                {
+                    return takeoffTarget;
+                }
+                AdvanceNow();
             }
             if (!moving && !_landingBehavior.IsActive &&
                 !_restingBehavior.IsActive)
@@ -100,7 +116,8 @@ namespace Landoria.HuginnCam
             _nextTargetTime = Time.time;
         }
         // Transfers a completed landing into a grounded resting session.
-        internal bool UpdateResting(Vector3 cameraPosition, Vector3 target)
+        internal bool UpdateResting(
+            Vector3 cameraPosition, Vector3 target)
         {
             if (_landingBehavior.TryComplete(cameraPosition, target))
             {
@@ -110,6 +127,7 @@ namespace Landoria.HuginnCam
 
             if (_restingBehavior.Update())
             {
+                BeginTakeoff(cameraPosition);
                 AdvanceNow();
             }
             return _restingBehavior.IsActive;
@@ -118,7 +136,8 @@ namespace Landoria.HuginnCam
         // Applies the look policy owned by the current primary behavior.
         internal void UpdateLook(
             HuginnCamBehaviorState state, HuginnCamLook look,
-            Transform cameraTransform, Vector3 playerFocus)
+            Transform cameraTransform, Vector3 playerFocus,
+            Vector3 flightDirection)
         {
             switch (state)
             {
@@ -127,17 +146,26 @@ namespace Landoria.HuginnCam
                         look, cameraTransform, playerFocus);
                     break;
                 case HuginnCamBehaviorState.Landing:
-                    look.UpdateLanding(cameraTransform, playerFocus);
+                    look.UpdateLanding(
+                        cameraTransform, playerFocus, flightDirection);
+                    break;
+                case HuginnCamBehaviorState.Takeoff:
+                    look.UpdateHorizon(
+                        cameraTransform, _takeoffBehavior.Direction);
                     break;
                 case HuginnCamBehaviorState.CombatObserver:
-                    look.Update(cameraTransform,
-                        _combatObserver.GetFocus(playerFocus));
+                    look.UpdateFlightAware(
+                        cameraTransform,
+                        _combatObserver.GetFocus(playerFocus),
+                        flightDirection);
                     break;
                 case HuginnCamBehaviorState.ObserverFlight:
-                    look.Update(cameraTransform, playerFocus);
+                    look.UpdateFlightAware(
+                        cameraTransform, playerFocus, flightDirection);
                     break;
                 default:
-                    look.Update(cameraTransform, playerFocus);
+                    look.UpdateFlightAware(
+                        cameraTransform, playerFocus, flightDirection);
                     break;
             }
         }
@@ -166,7 +194,8 @@ namespace Landoria.HuginnCam
         private Vector3 KeepBehindPlayer(Player player, Vector3 position)
         {
             return _isMoving && !_combatObserver.IsActive &&
-                   !_landingBehavior.IsActive && !_restingBehavior.IsActive
+                   !_landingBehavior.IsActive && !_restingBehavior.IsActive &&
+                   !_takeoffBehavior.IsActive
                 ? _trailingFlight.KeepBehind(
                     player.transform.position, _travelDirection, position)
                 : position;
@@ -178,8 +207,8 @@ namespace Landoria.HuginnCam
             Vector3 position = Flatten(player.transform.position);
             if (!_motionInitialized)
             {
-                InitializeMotion(position, player.transform.forward);
-                return false;
+                InitializeMotion(position, player);
+                return _isMoving;
             }
 
             if (!_isMoving)
@@ -195,11 +224,16 @@ namespace Landoria.HuginnCam
         }
 
         // Initializes the movement tracker at the player's current position.
-        private void InitializeMotion(Vector3 position, Vector3 facing)
+        private void InitializeMotion(Vector3 position, Player player)
         {
+            Vector3 velocity = Flatten(player.GetVelocity());
             _stationaryAnchor = position;
             _lastProgressPosition = position;
-            _travelDirection = Flatten(facing).normalized;
+            _isMoving = velocity.magnitude >= InitialMovementSpeed ||
+                        player.IsRunning();
+            _travelDirection = _isMoving && velocity.sqrMagnitude > 0.001f
+                ? velocity.normalized
+                : Flatten(player.transform.forward).normalized;
             if (_travelDirection.sqrMagnitude < 0.001f)
             {
                 _travelDirection = Vector3.forward;
@@ -253,6 +287,13 @@ namespace Landoria.HuginnCam
             return value;
         }
 
+        // Starts a smooth departure using the last known travel direction.
+        private void BeginTakeoff(Vector3 cameraPosition)
+        {
+            _landingBehavior.Cancel();
+            _takeoffBehavior.Begin(cameraPosition, _idleForwardDirection);
+        }
+
         // Chooses a new point and schedules the following choice.
         private void SelectTarget(Player player, bool moving)
         {
@@ -275,11 +316,11 @@ namespace Landoria.HuginnCam
                     player, _observerFlight, _idleForwardDirection))
                 {
                     _landingBehavior.Cancel();
-                    _observerFlight.SelectTarget();
+                    _observerFlight.SelectTarget(player.transform.position);
                 }
                 else if (!_landingBehavior.IsActive)
                 {
-                    _observerFlight.SelectTarget();
+                    _observerFlight.SelectTarget(player.transform.position);
                 }
             }
 

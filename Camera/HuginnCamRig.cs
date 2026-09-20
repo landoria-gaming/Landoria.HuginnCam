@@ -16,7 +16,7 @@ namespace Landoria.HuginnCam
         private AudioListener _originalListener;
         private HuginnCamAudio _audio;
         private RenderTexture _offscreenTarget;
-        private Vector3 _movementDirection;
+        private Vector3 _bodyDirection;
         private bool _poseInitialized;
         private readonly HuginnCamSpeed _speed = new HuginnCamSpeed();
         private readonly HuginnCamLook _look = new HuginnCamLook();
@@ -275,17 +275,17 @@ namespace Landoria.HuginnCam
             Vector3 desired = _behaviors.GetTarget(player, _camera.transform.position);
             _freedomFlight.Update(
                 player, _behaviors.IsPlayerMoving,
-                _behaviors.IsDangerActive,
+                _behaviors.IsDangerActive || _behaviors.IsTakingOff,
                 _behaviors.TravelDirection,
                 _camera.transform.position,
-                _movementDirection * _speed.Current,
+                _bodyDirection * _speed.Current,
                 ref desired);
             _freedomFlight.HandleAudio(_audio);
             _ambientCallScheduler.Update(_audio);
             if (_freedomFlight.TryTakeExitVelocity(out Vector3 exitVelocity) &&
                 exitVelocity.sqrMagnitude > 0.001f)
             {
-                _movementDirection = exitVelocity.normalized;
+                _bodyDirection = exitVelocity.normalized;
                 _speed.MatchCurrent(exitVelocity.magnitude);
             }
             bool retryDestination = _obstacleAvoidance.Prepare(
@@ -300,7 +300,7 @@ namespace Landoria.HuginnCam
             {
                 _camera.transform.position = desired;
                 _look.Snap(_camera.transform, head);
-                _movementDirection = player.transform.forward.normalized;
+                _bodyDirection = player.transform.forward.normalized;
                 _speed.Initialize(GetFlightProfile());
                 _poseInitialized = true;
                 return;
@@ -316,7 +316,7 @@ namespace Landoria.HuginnCam
                     _camera.transform.position, next, false);
                 if (_freedomFlight.FollowVelocity.sqrMagnitude > 0.001f)
                 {
-                    _movementDirection = _freedomFlight.FollowVelocity.normalized;
+                    _bodyDirection = _freedomFlight.FollowVelocity.normalized;
                     _speed.MatchCurrent(_freedomFlight.FollowVelocity.magnitude);
                 }
             }
@@ -333,12 +333,14 @@ namespace Landoria.HuginnCam
             if (_stateMachine.Is(HuginnCamBehaviorState.FreedomFlight))
             {
                 _freedomFlight.UpdateLook(
-                    _look, _camera.transform, player.transform.forward);
+                    _look, _camera.transform, player.transform.forward,
+                    _bodyDirection);
             }
             else
             {
                 _behaviors.UpdateLook(
-                    _stateMachine.State, _look, _camera.transform, head);
+                    _stateMachine.State, _look, _camera.transform, head,
+                    _bodyDirection);
             }
         }
         // Moves continuously at cruise speed and catches up only when far behind.
@@ -354,22 +356,23 @@ namespace Landoria.HuginnCam
             }
             Vector3 targetDirection = offset.sqrMagnitude > 0.001f
                 ? offset.normalized
-                : _movementDirection;
+                : _bodyDirection;
             _catchUp.Update(
                 offset.magnitude,
                 !_behaviors.IsLanding && !_behaviors.IsDangerActive &&
+                !_behaviors.IsTakingOff &&
                 !_freedomFlight.IsActive && !_obstacleAvoidance.IsActive);
             desired = _catchUp.TrackTarget(desired);
             offset = desired - _camera.transform.position;
-            _movementDirection = Vector3.RotateTowards(
-                _movementDirection,
+            _bodyDirection = Vector3.RotateTowards(
+                _bodyDirection,
                 targetDirection,
                 DirectionTurnSpeed * Time.deltaTime,
                 0f).normalized;
             float speed = _speed.Update(
                 offset.magnitude, GetFlightProfile());
             Vector3 nextPosition = _camera.transform.position +
-                                   _movementDirection * speed * Time.deltaTime;
+                                   _bodyDirection * speed * Time.deltaTime;
             nextPosition = _behaviors.ConstrainNormalFlight(
                 player, nextPosition);
             _camera.transform.position = HuginnCamTerrain.ResolveMovement(

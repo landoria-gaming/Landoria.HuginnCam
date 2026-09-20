@@ -17,17 +17,19 @@ namespace Landoria.HuginnCam
         {
             _state = freedomFlight.IsActive
                 ? HuginnCamBehaviorState.FreedomFlight
-                : controller.IsDangerActive
-                    ? HuginnCamBehaviorState.CombatObserver
-                    : controller.IsResting
-                        ? HuginnCamBehaviorState.Resting
-                        : controller.IsLanding
-                            ? HuginnCamBehaviorState.Landing
-                            : catchUpFlight.IsActive
-                                ? HuginnCamBehaviorState.CatchUpFlight
-                                : controller.IsPlayerMoving
-                                    ? HuginnCamBehaviorState.TrailingFlight
-                                    : HuginnCamBehaviorState.ObserverFlight;
+                : controller.IsTakingOff
+                    ? HuginnCamBehaviorState.Takeoff
+                    : controller.IsDangerActive
+                        ? HuginnCamBehaviorState.CombatObserver
+                        : controller.IsResting
+                            ? HuginnCamBehaviorState.Resting
+                            : controller.IsLanding
+                                ? HuginnCamBehaviorState.Landing
+                                : catchUpFlight.IsActive
+                                    ? HuginnCamBehaviorState.CatchUpFlight
+                                    : controller.IsPlayerMoving
+                                        ? HuginnCamBehaviorState.TrailingFlight
+                                        : HuginnCamBehaviorState.ObserverFlight;
             string effectiveName = obstacleAvoidance.IsActive
                 ? "ObstacleAvoidance"
                 : _state.ToString();

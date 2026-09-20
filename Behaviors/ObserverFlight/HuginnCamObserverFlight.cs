@@ -13,11 +13,11 @@ namespace Landoria.HuginnCam
         private const float MaximumHeight = 3f;
         private const float TurnAngle = 55f;
         private const float ApproachMinimumSpeed = 0.2f;
-        private const float ApproachCruiseSpeed = 0.7f;
-        private const float ApproachMaximumSpeed = 1f;
-        private const float RetreatMinimumSpeed = 0.5f;
-        private const float RetreatCruiseSpeed = 1f;
-        private const float RetreatMaximumSpeed = 2f;
+        private const float ApproachCruiseSpeed = 0.3f;
+        private const float ApproachMaximumSpeed = 0.4f;
+        private const float RetreatMinimumSpeed = 0.6f;
+        private const float RetreatCruiseSpeed = 0.8f;
+        private const float RetreatMaximumSpeed = 1f;
         private Vector3 _flightDirection;
         private float _height;
         private float _turnSide;
@@ -43,7 +43,7 @@ namespace Landoria.HuginnCam
         }
 
         // Starts or resumes the approach-and-retreat idle flight.
-        internal void SelectTarget()
+        internal void SelectTarget(Vector3 origin)
         {
             _pinned = false;
             if (_initialized)
@@ -51,7 +51,10 @@ namespace Landoria.HuginnCam
                 return;
             }
 
-            _flightDirection = RandomHorizontalDirection();
+            _flightDirection = HuginnCamTreeAvoidance.ChooseTurn(
+                origin, RandomHorizontalDirection(), 60f,
+                Random.value < 0.5f ? -1f : 1f,
+                RetreatTargetDistance);
             _height = Random.Range(MinimumHeight, MaximumHeight);
             _turnSide = Random.value < 0.5f ? -1f : 1f;
             _initialized = true;
@@ -76,12 +79,12 @@ namespace Landoria.HuginnCam
             Vector3 offset = Flatten(cameraPosition - playerPosition);
             if (!_retreating && offset.magnitude <= RetreatStartDistance)
             {
-                BeginRetreat(offset);
+                BeginRetreat(offset, playerPosition);
             }
             else if (_retreating &&
                      offset.magnitude >= RetreatReleaseDistance)
             {
-                BeginApproach(offset);
+                BeginApproach(offset, playerPosition);
             }
         }
 
@@ -102,26 +105,35 @@ namespace Landoria.HuginnCam
         }
 
         // Starts a faster curved retreat rather than reversing directly.
-        private void BeginRetreat(Vector3 offset)
+        private void BeginRetreat(Vector3 offset, Vector3 playerPosition)
         {
             _turnSide = Random.value < 0.5f ? -1f : 1f;
-            _flightDirection = Turn(NormalizeOrFallback(offset));
+            _flightDirection = ChooseTurn(
+                playerPosition, NormalizeOrFallback(offset),
+                RetreatTargetDistance);
             _height = Random.Range(MinimumHeight, MaximumHeight);
             _retreating = true;
         }
 
         // Starts another slow approach from the side reached by the retreat.
-        private void BeginApproach(Vector3 offset)
+        private void BeginApproach(Vector3 offset, Vector3 playerPosition)
         {
-            _flightDirection = Turn(NormalizeOrFallback(offset));
+            _flightDirection = ChooseTurn(
+                playerPosition, NormalizeOrFallback(offset),
+                RetreatReleaseDistance);
             _height = Random.Range(MinimumHeight, MaximumHeight);
             _retreating = false;
         }
 
         // Applies the current smooth turn direction to a radial vector.
-        private Vector3 Turn(Vector3 radial)
+        private Vector3 ChooseTurn(
+            Vector3 origin, Vector3 radial, float distance)
         {
-            return Quaternion.Euler(0f, _turnSide * TurnAngle, 0f) * radial;
+            Vector3 direction = HuginnCamTreeAvoidance.ChooseTurn(
+                origin, radial, TurnAngle, _turnSide, distance);
+            _turnSide = Mathf.Sign(Vector3.SignedAngle(
+                radial, direction, Vector3.up));
+            return direction;
         }
 
         // Produces a stable direction when camera and player overlap.

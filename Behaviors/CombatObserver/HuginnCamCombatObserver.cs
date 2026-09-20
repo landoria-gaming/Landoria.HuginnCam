@@ -57,16 +57,16 @@ namespace Landoria.HuginnCam
                 cameraPosition - player.transform.position);
             if (!wasActive)
             {
-                BeginApproach(offset);
+                BeginApproach(offset, player.transform.position);
             }
             if (!_retreating && offset.magnitude <= MinimumObservationDistance)
             {
-                BeginRetreat(offset);
+                BeginRetreat(offset, player.transform.position);
             }
             else if (_retreating &&
                      offset.magnitude >= RetreatReleaseDistance)
             {
-                BeginApproach(offset);
+                BeginApproach(offset, player.transform.position);
             }
         }
 
@@ -98,22 +98,33 @@ namespace Landoria.HuginnCam
         }
 
         // Starts a slow approach from a new side after the retreating turn.
-        private void BeginApproach(Vector3 offset)
+        private void BeginApproach(Vector3 offset, Vector3 playerPosition)
         {
             Vector3 radial = NormalizeOrFallback(offset);
-            _flightDirection = Quaternion.Euler(
-                0f, _turnSide * TurnAngle, 0f) * radial;
+            _flightDirection = ChooseTurn(
+                playerPosition, radial, RetreatReleaseDistance);
             _retreating = false;
         }
 
         // Starts a fast lateral retreat instead of reversing in a straight line.
-        private void BeginRetreat(Vector3 offset)
+        private void BeginRetreat(Vector3 offset, Vector3 playerPosition)
         {
             _turnSide = Random.value < 0.5f ? -1f : 1f;
             Vector3 radial = NormalizeOrFallback(offset);
-            _flightDirection = Quaternion.Euler(
-                0f, _turnSide * TurnAngle, 0f) * radial;
+            _flightDirection = ChooseTurn(
+                playerPosition, radial, RetreatTargetDistance);
             _retreating = true;
+        }
+
+        // Chooses the less wooded side while preserving the preferred turn on ties.
+        private Vector3 ChooseTurn(
+            Vector3 origin, Vector3 radial, float distance)
+        {
+            Vector3 direction = HuginnCamTreeAvoidance.ChooseTurn(
+                origin, radial, TurnAngle, _turnSide, distance);
+            _turnSide = Mathf.Sign(Vector3.SignedAngle(
+                radial, direction, Vector3.up));
+            return direction;
         }
 
         // Records recent health losses as active combat danger.

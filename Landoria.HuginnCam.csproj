@@ -65,6 +65,7 @@
     <Compile Include="Behaviors\FreedomFlight\HuginnCamFreedomFlight.cs" />
     <Compile Include="Behaviors\Shared\HuginnCamSpeed.cs" />
     <Compile Include="Behaviors\Shared\HuginnCamTerrain.cs" />
+    <Compile Include="Behaviors\Shared\HuginnCamTreeAvoidance.cs" />
     <Compile Include="Behaviors\Shared\HuginnCamVisibility.cs" />
     <Compile Include="Camera\HuginnCamRig.cs" />
     <Compile Include="Infrastructure\BehaviorController\HuginnCamBehaviorController.cs" />
@@ -77,6 +78,7 @@
     <Compile Include="Behaviors\Resting\HuginnCamResting.cs" />
     <Compile Include="Behaviors\ObserverFlight\HuginnCamObserverFlight.cs" />
     <Compile Include="Behaviors\TrailingFlight\HuginnCamTrailingFlight.cs" />
+    <Compile Include="Behaviors\Takeoff\HuginnCamTakeoff.cs" />
     <Compile Include="Behaviors\ObstacleAvoidance\HuginnCamObstacleAvoidance.cs" />
     <Compile Include="Camera\HuginnCamInterfaceController.cs" />
     <Compile Include="Camera\HuginnCamMainCamera.cs" />

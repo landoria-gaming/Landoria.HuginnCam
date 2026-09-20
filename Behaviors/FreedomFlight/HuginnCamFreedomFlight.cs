@@ -98,16 +98,20 @@ namespace Landoria.HuginnCam
 
         // Aims toward Huginn's independent free-flight interest.
         internal void UpdateLook(
-            HuginnCamLook look, Transform cameraTransform, Vector3 playerForward)
+            HuginnCamLook look, Transform cameraTransform,
+            Vector3 playerForward, Vector3 flightDirection)
         {
             if (IsHolding)
             {
-                look.UpdateFree(
-                    cameraTransform, GetSessionLookDirection(playerForward));
+                look.UpdateFreeFlightAware(
+                    cameraTransform,
+                    GetSessionLookDirection(playerForward),
+                    flightDirection);
             }
             else
             {
-                look.UpdateHorizon(cameraTransform, playerForward);
+                look.UpdateFreeFlightAware(
+                    cameraTransform, playerForward, flightDirection);
             }
         }
 
