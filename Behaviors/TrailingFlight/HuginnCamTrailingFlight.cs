@@ -8,8 +8,8 @@ namespace Landoria.HuginnCam
         private const float MinimumDistance = 3f;
         private const float MaximumDistance = 8f;
         private const float MaximumLateralDistance = 5f;
-        private const float MinimumHeight = 1f;
-        private const float MaximumHeight = 8f;
+        private const float MinimumHeight = 3f;
+        private const float MaximumHeight = 10f;
         private const float MinimumSpeed = 0.2f;
         private const float MaximumCruiseSpeed = 1f;
         private const float MaximumSpeed = 1f;

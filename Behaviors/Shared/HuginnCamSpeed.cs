@@ -5,6 +5,7 @@ namespace Landoria.HuginnCam
     // Produces gradual random cruise speeds with optional catch-up acceleration.
     internal sealed class HuginnCamSpeed
     {
+        private const float OverspeedRecoveryRate = 3f;
         private float _current;
         private float _targetCruise;
         private float _nextChangeTime;
@@ -36,8 +37,11 @@ namespace Landoria.HuginnCam
             float desired = Mathf.Min(
                 profile.MaximumSpeed,
                 _targetCruise + catchUp * profile.CatchUpSpeedPerMeter);
+            float changeRate = _current > profile.MaximumSpeed
+                ? Mathf.Max(profile.SpeedChangeRate, OverspeedRecoveryRate)
+                : profile.SpeedChangeRate;
             _current = Mathf.MoveTowards(
-                _current, desired, profile.SpeedChangeRate * Time.deltaTime);
+                _current, desired, changeRate * Time.deltaTime);
             return _current;
         }
 

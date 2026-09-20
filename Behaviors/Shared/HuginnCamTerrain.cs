@@ -7,7 +7,7 @@ namespace Landoria.HuginnCam
     {
         private const float CameraRadius = 0.1f;
         private const float TerrainClearance = 1f;
-        private const float AvoidanceClearance = 1.5f;
+        private const float AvoidanceClearance = 0.5f;
         private const float SlopeSampleDistance = 1f;
         private const float LandingSampleDistance = 0.75f;
         private const float MinimumSignificantSlope = 0.28f;

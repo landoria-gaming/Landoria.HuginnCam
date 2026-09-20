@@ -39,10 +39,10 @@ namespace Landoria.HuginnCam
             return true;
         }
 
-        // Interrupts rest immediately when the player moves or combat starts.
-        internal bool CancelFor(bool moving, bool danger)
+        // Interrupts rest immediately only when combat danger starts.
+        internal bool CancelForDanger(bool danger)
         {
-            if (!IsActive || (!moving && !danger))
+            if (!IsActive || !danger)
             {
                 return false;
             }

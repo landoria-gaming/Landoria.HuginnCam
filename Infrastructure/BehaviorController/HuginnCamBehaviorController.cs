@@ -57,16 +57,10 @@ namespace Landoria.HuginnCam
                 AdvanceNow();
             }
             bool moving = UpdateMotion(player);
-            if (_restingBehavior.CancelFor(
-                moving, _combatObserver.IsActive))
-            {
-                BeginTakeoff(cameraPosition);
-                AdvanceNow();
-            }
-            if (_landingBehavior.UpdateSafeIdleState(
-                moving || _restingBehavior.IsActive,
+            if (_restingBehavior.CancelForDanger(
                 _combatObserver.IsActive))
             {
+                BeginTakeoff(cameraPosition);
                 AdvanceNow();
             }
             if (!_initialized || moving != _movingTarget || Time.time >= _nextTargetTime)
@@ -90,6 +84,8 @@ namespace Landoria.HuginnCam
             }
             Vector3 horizontalPosition = _combatObserver.IsActive
                 ? _combatObserver.GetTarget(player)
+                : _landingBehavior.IsActive
+                    ? _landingBehavior.Target
                 : moving
                     ? _trailingFlight.GetPosition(player.transform.position, _travelDirection)
                     : _observerFlight.GetPosition(
@@ -114,6 +110,14 @@ namespace Landoria.HuginnCam
         internal void AdvanceNow()
         {
             _nextTargetTime = Time.time;
+        }
+        // Tracks continuous ObserverFlight time before allowing a landing.
+        internal void UpdateObserverLandingOpportunity(bool observing)
+        {
+            if (_landingBehavior.UpdateObserverState(observing))
+            {
+                AdvanceNow();
+            }
         }
         // Transfers a completed landing into a grounded resting session.
         internal bool UpdateResting(

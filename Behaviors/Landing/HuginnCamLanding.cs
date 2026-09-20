@@ -5,7 +5,6 @@ namespace Landoria.HuginnCam
     // Owns landing decisions, destinations, and approach state.
     internal sealed class HuginnCamLanding
     {
-        private const float LandingChance = 0.2f;
         private const float SafeIdleLandingChance = 0.95f;
         private const float SafeIdleDuration = 5f;
         private const float ArrivalDistance = 0.3f;
@@ -22,6 +21,7 @@ namespace Landoria.HuginnCam
         private float _safeIdleStartTime;
 
         internal bool IsActive { get; private set; }
+        internal Vector3 Target { get; private set; }
         internal float Height => Random.Range(MinimumHeight, MaximumHeight);
         internal HuginnCamFlightProfile Profile => new HuginnCamFlightProfile(
             MinimumSpeed, MaximumCruiseSpeed, MaximumSpeed, 2f, 0.25f, 0.4f);
@@ -29,17 +29,22 @@ namespace Landoria.HuginnCam
         // Chooses whether the next idle destination is a landing.
         internal void SelectState(bool moving, bool initial, bool danger)
         {
+            if (IsActive)
+            {
+                return;
+            }
+
             IsActive = !Preference.DisableLandings && !moving &&
-                       !IsActive && !danger &&
-                       (initial || Random.value < (_preferLanding
-                           ? SafeIdleLandingChance : LandingChance));
+                       !danger &&
+                       (initial || _preferLanding &&
+                           Random.value < SafeIdleLandingChance);
             _preferLanding = false;
         }
 
-        // Schedules an almost-certain landing after five safe idle seconds.
-        internal bool UpdateSafeIdleState(bool moving, bool danger)
+        // Schedules an almost-certain landing after five ObserverFlight seconds.
+        internal bool UpdateObserverState(bool observing)
         {
-            if (moving || danger)
+            if (!observing)
             {
                 ResetSafeIdle();
                 return false;
@@ -99,6 +104,7 @@ namespace Landoria.HuginnCam
         {
             float bestUnevenness = float.MaxValue;
             Vector2 bestOffset = Vector2.zero;
+            Vector3 bestPosition = Vector3.zero;
             bool found = false;
             for (int attempt = 0; attempt < MaximumAttempts; attempt++)
             {
@@ -116,6 +122,7 @@ namespace Landoria.HuginnCam
                 {
                     bestUnevenness = unevenness;
                     bestOffset = offset;
+                    bestPosition = position;
                     found = true;
                 }
             }
@@ -123,11 +130,12 @@ namespace Landoria.HuginnCam
             if (found)
             {
                 observerFlight.SetTarget(bestOffset.x, bestOffset.y);
+                Target = bestPosition;
             }
             return found;
         }
 
-        // Clears safe-idle scheduling while the player moves or fights.
+        // Clears the continuous ObserverFlight landing timer.
         private void ResetSafeIdle()
         {
             _safeIdleStartTime = 0f;

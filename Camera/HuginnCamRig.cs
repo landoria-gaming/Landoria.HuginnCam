@@ -292,6 +292,18 @@ namespace Landoria.HuginnCam
                 _bodyDirection = exitVelocity.normalized;
                 _speed.MatchCurrent(exitVelocity.magnitude);
             }
+            if (!_poseInitialized)
+            {
+                _camera.transform.position = desired;
+                _look.Snap(_camera.transform, head);
+                _bodyDirection = player.transform.forward.normalized;
+                _stateMachine.Update(
+                    _behaviors, _freedomFlight, _catchUp,
+                    _obstacleAvoidance);
+                _speed.Initialize(GetFlightProfile());
+                _poseInitialized = true;
+                return;
+            }
             bool retryDestination = _obstacleAvoidance.Prepare(
                 player, head, _camera.transform.position,
                 _behaviors.IsLanding, _behaviors.IsResting,
@@ -301,18 +313,11 @@ namespace Landoria.HuginnCam
                 _behaviors.RetrySoon();
             }
             _stateMachine.Update(_behaviors, _freedomFlight, _catchUp, _obstacleAvoidance);
-            if (!_poseInitialized)
-            {
-                _camera.transform.position = desired;
-                _look.Snap(_camera.transform, head);
-                _bodyDirection = player.transform.forward.normalized;
-                _speed.Initialize(GetFlightProfile());
-                _poseInitialized = true;
-                return;
-            }
             _behaviors.UpdateResting(
                 _camera.transform.position, desired);
             _stateMachine.Update(_behaviors, _freedomFlight, _catchUp, _obstacleAvoidance);
+            _behaviors.UpdateObserverLandingOpportunity(
+                _stateMachine.Is(HuginnCamBehaviorState.ObserverFlight));
             if (_stateMachine.Is(HuginnCamBehaviorState.FreedomFlight))
             {
                 Vector3 next = _freedomFlight.Move(

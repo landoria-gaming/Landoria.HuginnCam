@@ -18,9 +18,9 @@ namespace Landoria.HuginnCam
         private const float ApproachMinimumSpeed = 0.2f;
         private const float ApproachCruiseSpeed = 0.7f;
         private const float ApproachMaximumSpeed = 1f;
-        private const float RetreatMinimumSpeed = 2f;
-        private const float RetreatCruiseSpeed = 3f;
-        private const float RetreatMaximumSpeed = 8f;
+        private const float RetreatMinimumSpeed = 1f;
+        private const float RetreatCruiseSpeed = 2f;
+        private const float RetreatMaximumSpeed = 4f;
         private float _dangerUntil;
         private bool _retreating;
         private float _turnSide;
@@ -34,7 +34,7 @@ namespace Landoria.HuginnCam
         internal HuginnCamFlightProfile Profile => _retreating
             ? new HuginnCamFlightProfile(
                 RetreatMinimumSpeed, RetreatCruiseSpeed,
-                RetreatMaximumSpeed, 0f, 1f, 4f)
+                RetreatMaximumSpeed, 0f, 0.5f, 1.5f)
             : new HuginnCamFlightProfile(
                 ApproachMinimumSpeed, ApproachCruiseSpeed,
                 ApproachMaximumSpeed, float.MaxValue, 0f, 0.35f);
