@@ -11,6 +11,11 @@
     <AssemblyName>Landoria.HuginnCam</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
+    <CameraRecorderAssetUrl>https://github.com/UnityRuntimeCameraRecorder/UnityRuntimeCameraRecorder/releases/download/1.0.0-snapshot/UnityRuntimeCameraRecorder-1.0.0-snapshot-windows-x64.zip</CameraRecorderAssetUrl>
+    <CameraRecorderDownloadDirectory>$(MSBuildProjectDirectory)\obj\$(Configuration)\downloads</CameraRecorderDownloadDirectory>
+    <CameraRecorderArchive>$(CameraRecorderDownloadDirectory)\UnityRuntimeCameraRecorder.zip</CameraRecorderArchive>
+    <CameraRecorderEtag>$(MSBuildProjectDirectory)\lib\.UnityRuntimeCameraRecorder.etag</CameraRecorderEtag>
+    <CameraRecorderDownloadedEtag>$(CameraRecorderDownloadDirectory)\UnityRuntimeCameraRecorder.etag</CameraRecorderDownloadedEtag>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <DebugSymbols>true</DebugSymbols><DebugType>full</DebugType><Optimize>false</Optimize>
@@ -24,6 +29,7 @@
     <Reference Include="System" /><Reference Include="System.Core" />
     <Reference Include="BepInEx"><HintPath>$(BepInExPath)\core\BepInEx.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_valheim"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\assembly_valheim.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="assembly_utils"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\assembly_utils.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_postprocessing"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\assembly_postprocessing.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
@@ -34,22 +40,21 @@
     <Reference Include="UnityEngine.ScreenCaptureModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.ScreenCaptureModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.UI"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Unity.TextMeshPro"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\Unity.TextMeshPro.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="FFmpegMediaWriter"><HintPath>$(MSBuildProjectDirectory)\lib\FFmpegMediaWriter.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="UnityRuntimeCameraRecorder"><HintPath>$(MSBuildProjectDirectory)\lib\UnityRuntimeCameraRecorder.dll</HintPath><Private>true</Private></Reference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="vendor\UnityMediaRecorder\UnityMediaRecorder.csproj">
-      <Project>{8746502F-1F35-4EFA-AEA9-F4B494013F9E}</Project>
-      <Name>UnityMediaRecorder</Name>
-      <Private>true</Private>
-      <AdditionalProperties>UnityManagedPath=$(ValheimGamePath)\valheim_Data\Managed</AdditionalProperties>
-    </ProjectReference>
+    <Content Include="lib\Direct3DVideoEncoder.dll">
+      <Link>Direct3DVideoEncoder.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ConfigWatcher.cs" />
     <Compile Include="HuginnCamPlugin.cs" />
-    <Compile Include="HuginnCamPreference.cs" />
+    <Compile Include="Preference.cs" />
     <Compile Include="CinematicCameraRig.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RecordingStatusDisplay.cs" />
-    <Compile Include="ScreenRecorder.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="LICENSE" /><Content Include="manifest.json" />
@@ -60,5 +65,27 @@
     <_SnapshotExtraFiles Include="$(MSBuildProjectDirectory)\bin\Release\UnityMediaRecorder.dll;$(MSBuildProjectDirectory)\bin\Release\FFmpegMediaWriter.dll;$(MSBuildProjectDirectory)\THIRD_PARTY_NOTICES.md" />
     <_SnapshotExtraFiles Include="$(MSBuildProjectDirectory)\bin\Release\Direct3DVideoEncoder.dll" Condition="Exists('$(MSBuildProjectDirectory)\bin\Release\Direct3DVideoEncoder.dll')" />
   </ItemGroup>
+  <!-- Downloads and extracts the mutable camera recorder snapshot only when its ETag changes. -->
+  <Target Name="UpdateCameraRecorderLibraries" BeforeTargets="PrepareForBuild">
+    <MakeDir Directories="$(CameraRecorderDownloadDirectory);$(MSBuildProjectDirectory)\lib" />
+    <Exec Command="curl --fail --location --silent --show-error --etag-compare &quot;$(CameraRecorderEtag)&quot; --etag-save &quot;$(CameraRecorderDownloadedEtag)&quot; --output &quot;$(CameraRecorderArchive)&quot; --write-out &quot;%%{http_code}&quot; &quot;$(CameraRecorderAssetUrl)&quot;"
+          ConsoleToMSBuild="true"
+          StandardOutputImportance="Low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_CameraRecorderDownloadOutput" />
+    </Exec>
+    <PropertyGroup>
+      <_CameraRecorderHttpStatus>@(_CameraRecorderDownloadOutput)</_CameraRecorderHttpStatus>
+    </PropertyGroup>
+    <Error Condition="'$(_CameraRecorderHttpStatus)' != '200' And '$(_CameraRecorderHttpStatus)' != '304'"
+           Text="Unexpected HTTP status $(_CameraRecorderHttpStatus) while downloading UnityRuntimeCameraRecorder." />
+    <RemoveDir Directories="$(MSBuildProjectDirectory)\lib" Condition="'$(_CameraRecorderHttpStatus)' == '200'" />
+    <MakeDir Directories="$(MSBuildProjectDirectory)\lib" Condition="'$(_CameraRecorderHttpStatus)' == '200'" />
+    <Unzip SourceFiles="$(CameraRecorderArchive)"
+           DestinationFolder="$(MSBuildProjectDirectory)\lib"
+           Condition="'$(_CameraRecorderHttpStatus)' == '200'" />
+    <Copy SourceFiles="$(CameraRecorderDownloadedEtag)"
+          DestinationFiles="$(CameraRecorderEtag)"
+          Condition="'$(_CameraRecorderHttpStatus)' == '200'" />
+  </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
