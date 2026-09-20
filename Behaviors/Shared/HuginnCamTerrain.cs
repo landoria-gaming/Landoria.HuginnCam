@@ -9,6 +9,7 @@ namespace Landoria.HuginnCam
         private const float TerrainClearance = 1f;
         private const float AvoidanceClearance = 1.5f;
         private const float SlopeSampleDistance = 1f;
+        private const float LandingSampleDistance = 0.75f;
         private const float MinimumSignificantSlope = 0.28f;
 
         // Detects terrain that requires an accelerated climbing maneuver.
@@ -88,6 +89,33 @@ namespace Landoria.HuginnCam
             float waterHeight = Floating.GetLiquidLevel(
                 position, 1f, LiquidType.Water);
             return waterHeight <= -9999f || groundHeight >= waterHeight + 0.25f;
+        }
+
+        // Measures local landing unevenness; lower values represent flatter ground.
+        internal static bool TryGetLandingUnevenness(
+            Vector3 position, out float unevenness)
+        {
+            unevenness = float.MaxValue;
+            float[] heights = new float[5];
+            Vector3[] offsets =
+            {
+                Vector3.zero,
+                Vector3.right * LandingSampleDistance,
+                Vector3.left * LandingSampleDistance,
+                Vector3.forward * LandingSampleDistance,
+                Vector3.back * LandingSampleDistance
+            };
+            for (int index = 0; index < offsets.Length; index++)
+            {
+                if (!TryGetGroundHeight(position + offsets[index],
+                    out heights[index]))
+                {
+                    return false;
+                }
+            }
+
+            unevenness = Mathf.Max(heights) - Mathf.Min(heights);
+            return true;
         }
 
         // Raises a camera position above the local terrain when necessary.

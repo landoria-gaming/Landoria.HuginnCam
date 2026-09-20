@@ -75,7 +75,7 @@
     <Compile Include="Audio\HuginnCamAmbientCallScheduler.cs" />
     <Compile Include="Behaviors\Landing\HuginnCamLanding.cs" />
     <Compile Include="Behaviors\Resting\HuginnCamResting.cs" />
-    <Compile Include="Behaviors\OrbitFlight\HuginnCamOrbitFlight.cs" />
+    <Compile Include="Behaviors\ObserverFlight\HuginnCamObserverFlight.cs" />
     <Compile Include="Behaviors\TrailingFlight\HuginnCamTrailingFlight.cs" />
     <Compile Include="Behaviors\ObstacleAvoidance\HuginnCamObstacleAvoidance.cs" />
     <Compile Include="Camera\HuginnCamInterfaceController.cs" />

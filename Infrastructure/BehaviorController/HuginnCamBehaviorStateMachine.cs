@@ -27,7 +27,7 @@ namespace Landoria.HuginnCam
                                 ? HuginnCamBehaviorState.CatchUpFlight
                                 : controller.IsPlayerMoving
                                     ? HuginnCamBehaviorState.TrailingFlight
-                                    : HuginnCamBehaviorState.OrbitFlight;
+                                    : HuginnCamBehaviorState.ObserverFlight;
             string effectiveName = obstacleAvoidance.IsActive
                 ? "ObstacleAvoidance"
                 : _state.ToString();

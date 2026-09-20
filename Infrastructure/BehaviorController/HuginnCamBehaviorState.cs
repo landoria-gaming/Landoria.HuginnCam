@@ -3,7 +3,7 @@ namespace Landoria.HuginnCam
     // Lists the mutually exclusive primary Huginn behavior states.
     internal enum HuginnCamBehaviorState
     {
-        OrbitFlight,
+        ObserverFlight,
         TrailingFlight,
         CatchUpFlight,
         FreedomFlight,

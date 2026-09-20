@@ -93,25 +93,38 @@ namespace Landoria.HuginnCam
             IsActive = false;
         }
 
-        // Tries several candidate points and installs the first dry destination.
+        // Samples dry candidates and installs the flattest landing destination.
         internal bool TrySelectTarget(
-            Player player, HuginnCamOrbitFlight orbitFlight, Vector3 forward)
+            Player player, HuginnCamObserverFlight observerFlight, Vector3 forward)
         {
+            float bestUnevenness = float.MaxValue;
+            Vector2 bestOffset = Vector2.zero;
+            bool found = false;
             for (int attempt = 0; attempt < MaximumAttempts; attempt++)
             {
                 float angle = Random.Range(0f, Mathf.PI * 2f);
                 float radius = Random.Range(MinimumDistance, MaximumDistance);
-                orbitFlight.SetTarget(
+                Vector2 offset = new Vector2(
                     Mathf.Sin(angle) * radius, Mathf.Cos(angle) * radius);
-                Vector3 position = orbitFlight.GetPosition(
+                observerFlight.SetTarget(offset.x, offset.y);
+                Vector3 position = observerFlight.GetPosition(
                     player.transform.position, forward);
-                if (HuginnCamTerrain.IsDryLandingPoint(position))
+                if (HuginnCamTerrain.IsDryLandingPoint(position) &&
+                    HuginnCamTerrain.TryGetLandingUnevenness(
+                        position, out float unevenness) &&
+                    unevenness < bestUnevenness)
                 {
-                    return true;
+                    bestUnevenness = unevenness;
+                    bestOffset = offset;
+                    found = true;
                 }
             }
 
-            return false;
+            if (found)
+            {
+                observerFlight.SetTarget(bestOffset.x, bestOffset.y);
+            }
+            return found;
         }
 
         // Clears safe-idle scheduling while the player moves or fights.
