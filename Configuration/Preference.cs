@@ -9,14 +9,12 @@ namespace Landoria.HuginnCam
     {
         private static ConfigEntry<KeyboardShortcut> recordingShortcut;
         private static ConfigEntry<KeyboardShortcut> huginnCamShortcut;
-        private static ConfigEntry<bool> enableRavenCalls;
         private static ConfigEntry<UnityRuntimeCameraRecorder.RecordingQualityPreset>
             recordingQuality;
         private static ConfigEntry<int> maximumFrameRate;
 
         internal static KeyboardShortcut RecordingShortcut => recordingShortcut.Value;
         internal static KeyboardShortcut HuginnCamShortcut => huginnCamShortcut.Value;
-        internal static bool RavenCallsEnabled => enableRavenCalls.Value;
         internal static UnityRuntimeCameraRecorder.RecordingQualityPreset RecordingQuality =>
             recordingQuality.Value;
         internal static int MaximumFrameRate => maximumFrameRate.Value;
@@ -36,11 +34,6 @@ namespace Landoria.HuginnCam
                 new KeyboardShortcut(KeyCode.F8, KeyCode.LeftShift),
                 "Shortcut used to enter or leave the Huginn camera.\n" +
                 "\nhttps://docs.unity3d.com/ScriptReference/KeyCode.html");
-            enableRavenCalls = config.Bind(
-                "Audio",
-                "EnableRavenCalls",
-                true,
-                "Play Huginn's raven calls while the camera is active.");
             recordingQuality = config.Bind(
                 "Recording",
                 "Quality",
@@ -61,7 +54,6 @@ namespace Landoria.HuginnCam
             recordingShortcut.Value = new KeyboardShortcut(KeyCode.F8);
             huginnCamShortcut.Value = new KeyboardShortcut(
                 KeyCode.F8, KeyCode.LeftShift);
-            enableRavenCalls.Value = true;
             recordingQuality.Value =
                 UnityRuntimeCameraRecorder.RecordingQualityPreset.Medium;
             maximumFrameRate.Value = 30;

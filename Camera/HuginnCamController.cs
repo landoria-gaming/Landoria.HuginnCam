@@ -52,8 +52,6 @@ namespace Landoria.HuginnCam
                 _cameraRig.Initialize(_gameplayCamera);
                 _gameplayCamera.enabled = false;
                 _cameraRig.BeginPreview();
-                _cameraRig.GetComponentInChildren<HuginnCamAudio>()
-                    .PlayCall(6);
                 _interface.Hide();
                 Notify("Huginn Cam enabled.");
             }

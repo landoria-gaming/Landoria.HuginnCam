@@ -36,8 +36,6 @@
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.AudioModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnityEngine.UnityWebRequestModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.UnityWebRequestModule.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnityEngine.UnityWebRequestAudioModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.UnityWebRequestAudioModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.ScreenCaptureModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.ScreenCaptureModule.dll</HintPath><Private>false</Private></Reference>
@@ -62,7 +60,7 @@
     <Compile Include="Behaviors\CombatObserver\HuginnCamCombatObserver.cs" />
     <Compile Include="Behaviors\CombatObserver\HuginnCamCombatEvents.cs" />
     <Compile Include="Behaviors\CombatObserver\HuginnCamDamagePatch.cs" />
-    <Compile Include="Audio\HuginnCamAudio.cs" />
+    <Compile Include="Camera\HuginnCamAudioListener.cs" />
     <Compile Include="Camera\HuginnCamEffectMirror.cs" />
     <Compile Include="Behaviors\Shared\HuginnCamLook.cs" />
     <Compile Include="Behaviors\Shared\HuginnCamSpeed.cs" />
@@ -75,7 +73,6 @@
     <Compile Include="Behaviors\Shared\HuginnCamFlightProfile.cs" />
     <Compile Include="Behaviors\Shared\HuginnCamForestAwareness.cs" />
     <Compile Include="Behaviors\CatchUpFlight\HuginnCamCatchUpFlight.cs" />
-    <Compile Include="Audio\HuginnCamAmbientCallScheduler.cs" />
     <Compile Include="Behaviors\ObserverFlight\HuginnCamObserverFlight.cs" />
     <Compile Include="Behaviors\TrailingFlight\HuginnCamTrailingFlight.cs" />
     <Compile Include="Behaviors\TrailingFlight\HuginnCamTrailingObstacleAvoidance.cs" />
@@ -86,10 +83,6 @@
   <ItemGroup>
     <Content Include="LICENSE" /><Content Include="manifest.json" />
     <Content Include="README.md" />
-    <EmbeddedResource Include="Assets\Audio\craw2.ogg" />
-    <EmbeddedResource Include="Assets\Audio\craw3.ogg" />
-    <EmbeddedResource Include="Assets\Audio\craw4.ogg" />
-    <EmbeddedResource Include="Assets\Audio\craw6.ogg" />
   </ItemGroup>
   <ItemGroup>
     <_SnapshotExtraFiles Include="$(MSBuildProjectDirectory)\bin\Release\UnityRuntimeCameraRecorder.dll;$(MSBuildProjectDirectory)\bin\Release\FFmpegMediaWriter.dll" />

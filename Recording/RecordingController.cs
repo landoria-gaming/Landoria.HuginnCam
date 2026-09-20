@@ -65,7 +65,7 @@ namespace Landoria.HuginnCam
                 throw new InvalidOperationException("The local player camera is unavailable.");
             }
 
-            _gameplayListener = HuginnCamAudio.FindActiveListener(gameplayCamera);
+            _gameplayListener = HuginnCamAudioListener.FindActive(gameplayCamera);
             if (_gameplayListener == null)
             {
                 throw new InvalidOperationException("The gameplay audio listener is unavailable.");

@@ -15,14 +15,12 @@ namespace Landoria.HuginnCam
         private Camera _camera;
         private AudioListener _listener;
         private AudioListener _originalListener;
-        private HuginnCamAudio _audio;
         private RenderTexture _offscreenTarget;
         private Vector3 _bodyDirection;
         private bool _poseInitialized;
         private readonly HuginnCamSpeed _speed = new HuginnCamSpeed();
         private readonly HuginnCamLook _look = new HuginnCamLook();
         private readonly HuginnCamBehaviorController _behaviors = new HuginnCamBehaviorController();
-        private readonly HuginnCamAmbientCallScheduler _ambientCallScheduler = new HuginnCamAmbientCallScheduler();
         private readonly HuginnCamCatchUpFlight _catchUp = new HuginnCamCatchUpFlight();
         private readonly HuginnCamMainCamera _mainCamera = new HuginnCamMainCamera();
         private readonly HuginnCamBehaviorStateMachine _stateMachine = new HuginnCamBehaviorStateMachine();
@@ -38,15 +36,13 @@ namespace Landoria.HuginnCam
             GameObject cameraObject = new GameObject("HuginnCamCamera");
             cameraObject.transform.SetParent(transform, false);
             _camera = cameraObject.AddComponent<Camera>();
-            _audio = cameraObject.AddComponent<HuginnCamAudio>();
-            _audio.Initialize();
             _camera.CopyFrom(sourceCamera);
             _camera.depth = sourceCamera.depth + 1f;
             _camera.enabled = false;
             CopyVisualEffectStack(sourceCamera, cameraObject);
             if (transferAudio)
             {
-                _originalListener = HuginnCamAudio.FindActiveListener(sourceCamera);
+                _originalListener = HuginnCamAudioListener.FindActive(sourceCamera);
                 if (_originalListener != null)
                 {
                     _originalListener.enabled = false;
@@ -270,7 +266,6 @@ namespace Landoria.HuginnCam
             }
             Vector3 head = player.transform.position + Vector3.up * HeadHeight;
             Vector3 desired = _behaviors.GetTarget(player, _camera.transform.position);
-            _ambientCallScheduler.Update(_audio);
             if (!_poseInitialized)
             {
                 _camera.transform.position = desired;
