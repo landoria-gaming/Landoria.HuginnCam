@@ -281,6 +281,10 @@ namespace Landoria.HuginnCam
                 _bodyDirection * _speed.Current,
                 ref desired);
             _freedomFlight.HandleAudio(_audio);
+            if (_freedomFlight.CompletedThisFrame)
+            {
+                _catchUp.BeginForced();
+            }
             _ambientCallScheduler.Update(_audio);
             if (_freedomFlight.TryTakeExitVelocity(out Vector3 exitVelocity) &&
                 exitVelocity.sqrMagnitude > 0.001f)
@@ -290,7 +294,8 @@ namespace Landoria.HuginnCam
             }
             bool retryDestination = _obstacleAvoidance.Prepare(
                 player, head, _camera.transform.position,
-                _behaviors.IsLanding || _behaviors.IsResting, ref desired);
+                _behaviors.IsLanding, _behaviors.IsResting,
+                !_freedomFlight.IsHolding, ref desired);
             if (retryDestination)
             {
                 _behaviors.RetrySoon();
@@ -324,7 +329,8 @@ namespace Landoria.HuginnCam
             {
                 MoveCamera(player, ref desired);
             }
-            if (_obstacleAvoidance.ShouldRetryAfterMovement(
+            if (!_freedomFlight.IsHolding &&
+                _obstacleAvoidance.ShouldRetryAfterMovement(
                 player, head, _camera.transform.position,
                 _behaviors.IsLanding || _behaviors.IsResting))
             {
@@ -333,8 +339,7 @@ namespace Landoria.HuginnCam
             if (_stateMachine.Is(HuginnCamBehaviorState.FreedomFlight))
             {
                 _freedomFlight.UpdateLook(
-                    _look, _camera.transform, player.transform.forward,
-                    _bodyDirection);
+                    _look, _camera.transform, _bodyDirection);
             }
             else
             {

@@ -17,19 +17,24 @@ namespace Landoria.HuginnCam
         private const float MinimumSessionSpeed = 0.2f;
         private const float ApproachMovementSmoothTime = 0.65f;
         private const float SessionTransitionDuration = 1.5f;
+        private const float MaximumApproachDuration = 8f;
         private Vector3 _followVelocity;
         private float _nextOpportunityTime;
         private float _holdEndTime;
         private bool _initialized;
         private bool _exitVelocityReady;
         private Vector3 _sessionOffset;
+        private Vector3 _sessionAnchor;
+        private Vector3 _sessionEntryDirection;
         private float _sessionStartTime;
         private float _sessionSeed;
+        private float _approachEndTime;
 
         internal bool IsActive { get; private set; }
         internal bool IsHolding { get; private set; }
         internal bool StartedThisFrame { get; private set; }
         internal bool ArrivedThisFrame { get; private set; }
+        internal bool CompletedThisFrame { get; private set; }
         internal Vector3 FollowVelocity => _followVelocity;
         internal HuginnCamFlightProfile Profile => new HuginnCamFlightProfile(
             MinimumSessionSpeed, MaximumSessionSpeed,
@@ -58,6 +63,7 @@ namespace Landoria.HuginnCam
         {
             StartedThisFrame = false;
             ArrivedThisFrame = false;
+            CompletedThisFrame = false;
             InitializeSchedule();
             bool lagging = IsBehindMovingZone(
                 player, cameraPosition, travelDirection);
@@ -73,11 +79,15 @@ namespace Landoria.HuginnCam
                 return;
             }
 
-            target = player.transform.position + Vector3.up * HeightAbovePlayer;
+            Vector3 normalTarget = target;
             if (IsHolding)
             {
                 UpdateSessionTarget();
-                target += _sessionOffset;
+                target = _sessionAnchor + _sessionOffset;
+            }
+            else
+            {
+                target = _sessionAnchor;
             }
 
             if (!IsHolding && Vector3.Distance(cameraPosition, target) <= ArrivalDistance)
@@ -88,30 +98,40 @@ namespace Landoria.HuginnCam
                 _sessionSeed = Random.Range(0f, 1000f);
                 _sessionOffset = Vector3.zero;
                 _holdEndTime = Time.time + Random.Range(3f, 6f);
+                HuginnCamPlugin.Log.LogInfo(
+                    "FreedomFlight reached its fixed release point.");
+            }
+            else if (!IsHolding && Time.time >= _approachEndTime)
+            {
+                HuginnCamPlugin.Log.LogWarning(
+                    "FreedomFlight approach timed out; returning to normal flight.");
+                Complete();
+                target = normalTarget;
             }
 
             if (IsHolding && Time.time >= _holdEndTime)
             {
                 Complete();
+                target = normalTarget;
             }
         }
 
         // Aims toward Huginn's independent free-flight interest.
         internal void UpdateLook(
             HuginnCamLook look, Transform cameraTransform,
-            Vector3 playerForward, Vector3 flightDirection)
+            Vector3 flightDirection)
         {
             if (IsHolding)
             {
                 look.UpdateFreeFlightAware(
                     cameraTransform,
-                    GetSessionLookDirection(playerForward),
+                    GetSessionLookDirection(_sessionEntryDirection),
                     flightDirection);
             }
             else
             {
                 look.UpdateFreeFlightAware(
-                    cameraTransform, playerForward, flightDirection);
+                    cameraTransform, _sessionEntryDirection, flightDirection);
             }
         }
 
@@ -134,7 +154,7 @@ namespace Landoria.HuginnCam
         }
 
         // Produces a continuously wandering view blended from the entry heading.
-        private Vector3 GetSessionLookDirection(Vector3 playerForward)
+        private Vector3 GetSessionLookDirection(Vector3 entryDirection)
         {
             float elapsed = Time.time - _sessionStartTime;
             float sample = elapsed * 0.12f;
@@ -146,7 +166,7 @@ namespace Landoria.HuginnCam
                                     Vector3.forward;
             float blend = Mathf.SmoothStep(
                 0f, 1f, Mathf.Clamp01(elapsed / SessionTransitionDuration));
-            return Vector3.Slerp(playerForward.normalized, freeDirection, blend);
+            return Vector3.Slerp(entryDirection.normalized, freeDirection, blend);
         }
 
         // Converts one Perlin sample into a smooth signed value.
@@ -172,7 +192,7 @@ namespace Landoria.HuginnCam
             return trailingDistance > MaximumNormalTrailingDistance;
         }
 
-        // Approaches smoothly, then stays horizontally above the moving player.
+        // Approaches smoothly, then wanders around the fixed release point.
         internal Vector3 Move(Vector3 current, Vector3 target)
         {
             float transition = IsHolding
@@ -226,6 +246,12 @@ namespace Landoria.HuginnCam
                 IsHolding = false;
                 StartedThisFrame = true;
                 _followVelocity = incomingVelocity;
+                _sessionAnchor = player.transform.position +
+                                 Vector3.up * HeightAbovePlayer;
+                _sessionEntryDirection = player.transform.forward;
+                _approachEndTime = Time.time + MaximumApproachDuration;
+                HuginnCamPlugin.Log.LogInfo(
+                    "FreedomFlight started toward a fixed release point.");
                 return;
             }
 
@@ -238,6 +264,8 @@ namespace Landoria.HuginnCam
             _exitVelocityReady = IsHolding;
             IsActive = false;
             IsHolding = false;
+            CompletedThisFrame = true;
+            HuginnCamPlugin.Log.LogInfo("FreedomFlight completed.");
             ScheduleRepeatOpportunity();
         }
 

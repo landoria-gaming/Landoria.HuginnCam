@@ -21,14 +21,14 @@ namespace Landoria.HuginnCam
         private const float RetreatMinimumSpeed = 2f;
         private const float RetreatCruiseSpeed = 3f;
         private const float RetreatMaximumSpeed = 8f;
-        private float _lastHealth;
         private float _dangerUntil;
-        private bool _healthInitialized;
         private bool _retreating;
         private float _turnSide;
         private Vector3 _flightDirection;
         private Character _opponent;
         private float _nextOpponentSearchTime;
+        private float _lastHandledDamageDealtTime = -1f;
+        private float _lastHandledDamageReceivedTime = -1f;
 
         internal bool IsActive { get; private set; }
         internal HuginnCamFlightProfile Profile => _retreating
@@ -42,14 +42,15 @@ namespace Landoria.HuginnCam
         // Updates combat detection and switches between approach and retreat.
         internal void Update(Player player, Vector3 cameraPosition)
         {
-            UpdateDamage(player.GetHealth());
+            bool receivedDamage = UpdateDamageReceived();
+            bool dealtDamage = UpdateDamageDealt();
             UpdateOpponent(player);
             bool wasActive = IsActive;
-            IsActive = player.InAttack() || player.IsDrawingBow() ||
-                       Time.time < _dangerUntil;
+            IsActive = Time.time < _dangerUntil;
             if (!IsActive)
             {
                 _retreating = false;
+                _opponent = null;
                 return;
             }
 
@@ -57,6 +58,11 @@ namespace Landoria.HuginnCam
                 cameraPosition - player.transform.position);
             if (!wasActive)
             {
+                string reason = dealtDamage
+                    ? "damage dealt"
+                    : receivedDamage ? "damage received" : "recent damage";
+                HuginnCamPlugin.Log.LogInfo(
+                    $"CombatObserver activated: {reason}.");
                 BeginApproach(offset, player.transform.position);
             }
             if (!_retreating && offset.magnitude <= MinimumObservationDistance)
@@ -127,18 +133,45 @@ namespace Landoria.HuginnCam
             return direction;
         }
 
-        // Records recent health losses as active combat danger.
-        private void UpdateDamage(float health)
+        // Extends observation after confirmed damage from another character.
+        private bool UpdateDamageReceived()
         {
-            if (!_healthInitialized)
+            float eventTime = HuginnCamCombatEvents.LastDamageReceivedTime;
+            if (eventTime <= _lastHandledDamageReceivedTime)
             {
-                _healthInitialized = true;
+                return false;
             }
-            else if (health < _lastHealth - 0.01f)
+
+            _lastHandledDamageReceivedTime = eventTime;
+            if (Time.time - eventTime > DamageAlertDuration)
             {
-                _dangerUntil = Time.time + DamageAlertDuration;
+                return false;
             }
-            _lastHealth = health;
+
+            _dangerUntil = Mathf.Max(
+                _dangerUntil, eventTime + DamageAlertDuration);
+            _opponent = HuginnCamCombatEvents.LastAttacker;
+            return true;
+        }
+
+        // Extends combat observation after confirmed damage dealt by the player.
+        private bool UpdateDamageDealt()
+        {
+            float eventTime = HuginnCamCombatEvents.LastDamageDealtTime;
+            if (eventTime <= _lastHandledDamageDealtTime)
+            {
+                return false;
+            }
+
+            _lastHandledDamageDealtTime = eventTime;
+            if (Time.time - eventTime > DamageAlertDuration)
+            {
+                return false;
+            }
+            _dangerUntil = Mathf.Max(
+                _dangerUntil, eventTime + DamageAlertDuration);
+            _opponent = HuginnCamCombatEvents.LastDamagedOpponent;
+            return true;
         }
 
         // Refreshes the closest hostile combat participant twice per second.
@@ -150,8 +183,12 @@ namespace Landoria.HuginnCam
             }
 
             _nextOpponentSearchTime = Time.time + OpponentSearchInterval;
-            _opponent = BaseAI.FindClosestEnemy(
-                player, player.transform.position, MaximumOpponentDistance);
+            if (_opponent == null || _opponent.IsDead())
+            {
+                _opponent = BaseAI.FindClosestEnemy(
+                    player, player.transform.position,
+                    MaximumOpponentDistance);
+            }
         }
 
         // Produces a stable horizontal direction for degenerate offsets.

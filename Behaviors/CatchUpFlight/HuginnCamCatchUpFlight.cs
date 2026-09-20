@@ -26,6 +26,13 @@ namespace Landoria.HuginnCam
             MinimumSpeed, MaximumCruiseSpeed, MaximumSpeed,
             ActivationDistance, SpeedPerMeter, AccelerationRate);
 
+        // Forces the recovery state after an independent freedom flight.
+        internal void BeginForced()
+        {
+            IsActive = true;
+            _targetInitialized = false;
+        }
+
         // Enters with a large delay and exits only after most delay is recovered.
         internal void Update(float targetDistance, bool allowed)
         {

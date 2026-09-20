@@ -74,8 +74,16 @@ namespace Landoria.HuginnCam
 
             string previous = _effectiveName ?? "None";
             _effectiveName = next;
-            HuginnCamPlugin.Log.LogInfo(
-                $"Huginn behavior changed: {previous} -> {next}");
+            string message =
+                $"Huginn behavior changed: {previous} -> {next}";
+            if (next == "ObstacleAvoidance")
+            {
+                HuginnCamPlugin.Log.LogWarning(
+                    $"{message}. Emergency obstacle avoidance activated.");
+                return;
+            }
+
+            HuginnCamPlugin.Log.LogInfo(message);
         }
     }
 }

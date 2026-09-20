@@ -9,6 +9,7 @@ namespace Landoria.HuginnCam
         private const float OpenAreaDistance = 15f;
         private const int OpenDirectionCount = 8;
         private const int RequiredOpenDirections = 6;
+        private const float FlightProbeRadius = 0.4f;
 
         // Returns whether the camera position has a clear view of the player.
         internal static bool HasClearSight(
@@ -64,6 +65,32 @@ namespace Landoria.HuginnCam
             }
 
             return openDirections >= RequiredOpenDirections;
+        }
+
+        // Measures the unobstructed distance along a camera flight corridor.
+        internal static float GetFlightClearance(
+            Player player, Vector3 origin, Vector3 direction, float distance)
+        {
+            if (direction.sqrMagnitude < 0.001f)
+            {
+                return distance;
+            }
+
+            RaycastHit[] hits = Physics.SphereCastAll(
+                origin, FlightProbeRadius, direction.normalized, distance,
+                Physics.DefaultRaycastLayers,
+                QueryTriggerInteraction.Ignore);
+            float nearest = distance;
+            foreach (RaycastHit hit in hits)
+            {
+                if (!IsPlayerCollider(player, hit.collider) &&
+                    hit.distance < nearest)
+                {
+                    nearest = hit.distance;
+                }
+            }
+
+            return nearest;
         }
 
         // Excludes the followed player's own colliders from visibility checks.

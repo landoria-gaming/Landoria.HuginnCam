@@ -59,6 +59,8 @@
     <Compile Include="Recording\RecordingController.cs" />
     <Compile Include="Camera\HuginnCamController.cs" />
     <Compile Include="Behaviors\CombatObserver\HuginnCamCombatObserver.cs" />
+    <Compile Include="Behaviors\CombatObserver\HuginnCamCombatEvents.cs" />
+    <Compile Include="Behaviors\CombatObserver\HuginnCamDamagePatch.cs" />
     <Compile Include="Audio\HuginnCamAudio.cs" />
     <Compile Include="Camera\HuginnCamEffectMirror.cs" />
     <Compile Include="Behaviors\Shared\HuginnCamLook.cs" />
