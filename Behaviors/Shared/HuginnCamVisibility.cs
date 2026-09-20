@@ -40,12 +40,13 @@ namespace Landoria.HuginnCam
         }
 
         // Detects a broad clearing with open sky and few nearby obstructions.
-        internal static bool IsOpenForOverhead(Player player, Vector3 cameraPosition)
+        internal static bool IsOpenForFreedomFlight(
+            Player player, Vector3 cameraPosition)
         {
             Vector3 head = player.transform.position + Vector3.up * 1.7f;
-            Vector3 overhead = player.transform.position + Vector3.up * 10f;
-            if (!HasClearSight(player, head, overhead) ||
-                !HasClearSight(player, cameraPosition, overhead))
+            Vector3 freedomPoint = player.transform.position + Vector3.up * 10f;
+            if (!HasClearSight(player, head, freedomPoint) ||
+                !HasClearSight(player, cameraPosition, freedomPoint))
             {
                 return false;
             }

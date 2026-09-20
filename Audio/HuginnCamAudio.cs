@@ -9,17 +9,15 @@ using UnityEngine.Networking;
 
 namespace Landoria.HuginnCam
 {
-    // Loads and schedules the embedded raven calls used by Huginn.
+    // Loads and plays embedded raven calls requested by Huginn behaviors.
     internal sealed class HuginnCamAudio : MonoBehaviour
     {
-        private const float MinimumCallDelay = 10f;
-        private const float MaximumCallDelay = 20f;
         private readonly Dictionary<int, AudioClip> _clips =
             new Dictionary<int, AudioClip>();
         private AudioSource _source;
-        private float _nextCallTime;
         private int _pendingCall;
         private bool _wasEnabled;
+        internal float LastPlayedTime { get; private set; } = -1f;
 
         // Finds Valheim's active listener even when it is outside Camera.main.
         internal static AudioListener FindActiveListener(Camera gameplayCamera)
@@ -53,67 +51,17 @@ namespace Landoria.HuginnCam
             _source.spatialBlend = 0f;
             _source.volume = 0.35f;
             _wasEnabled = Preference.RavenCallsEnabled;
-            ScheduleRegularCall();
             StartCoroutine(LoadClips());
         }
 
-        // Plays a normal call whenever its randomized interval expires.
+        // Applies runtime audio configuration without choosing any call.
         private void Update()
         {
-            if (HandleEnabledStateChange() || !Preference.RavenCallsEnabled)
-            {
-                return;
-            }
-
-            if (Time.time < _nextCallTime || _clips.Count < 6)
-            {
-                return;
-            }
-
-            PlayRegularCall();
+            HandleEnabledStateChange();
         }
 
-        // Plays the longer call that announces an overhead flight.
-        internal void PlayOverheadDeparture()
-        {
-            Play(UnityEngine.Random.value < 0.5f ? 1 : 5);
-        }
-
-        // Plays one normal call after Huginn reaches the overhead position.
-        internal void PlayOverheadArrival()
-        {
-            PlayRegularCall();
-        }
-
-        // Plays the short call used when visible Huginn mode starts.
-        internal void PlayActivationCall()
-        {
-            Play(6);
-        }
-
-        // Plays the call associated with an overhead state transition.
-        internal void HandleOverwatch(HuginnCamOverwatch overwatch)
-        {
-            if (overwatch.StartedThisFrame)
-            {
-                PlayOverheadDeparture();
-            }
-
-            if (overwatch.ArrivedThisFrame)
-            {
-                PlayOverheadArrival();
-            }
-        }
-
-        // Chooses uniformly from calls 2, 3, 4, and 6.
-        private void PlayRegularCall()
-        {
-            int[] regularCalls = { 2, 3, 4, 6 };
-            Play(regularCalls[UnityEngine.Random.Range(0, regularCalls.Length)]);
-        }
-
-        // Plays one loaded clip and restarts the regular-call interval.
-        private void Play(int number)
+        // Plays one numbered call without deciding why or when it is needed.
+        internal void PlayCall(int number)
         {
             if (!Preference.RavenCallsEnabled)
             {
@@ -124,7 +72,6 @@ namespace Landoria.HuginnCam
             if (_source == null || !_clips.TryGetValue(number, out AudioClip clip))
             {
                 _pendingCall = number;
-                ScheduleRegularCall();
                 return;
             }
 
@@ -132,16 +79,16 @@ namespace Landoria.HuginnCam
             _source.Stop();
             _source.clip = clip;
             _source.Play();
-            ScheduleRegularCall();
+            LastPlayedTime = Time.time;
         }
 
         // Stops immediately when disabled and resets the timer when re-enabled.
-        private bool HandleEnabledStateChange()
+        private void HandleEnabledStateChange()
         {
             bool enabled = Preference.RavenCallsEnabled;
             if (enabled == _wasEnabled)
             {
-                return false;
+                return;
             }
 
             _wasEnabled = enabled;
@@ -150,19 +97,6 @@ namespace Landoria.HuginnCam
             {
                 _source?.Stop();
             }
-            else
-            {
-                ScheduleRegularCall();
-            }
-
-            return true;
-        }
-
-        // Chooses the next normal-call time between ten and twenty seconds.
-        private void ScheduleRegularCall()
-        {
-            _nextCallTime = Time.time +
-                            UnityEngine.Random.Range(MinimumCallDelay, MaximumCallDelay);
         }
 
         // Extracts embedded OGG files and lets Unity decode them asynchronously.
@@ -187,7 +121,7 @@ namespace Landoria.HuginnCam
                     _clips[number] = clip;
                     if (_pendingCall == number)
                     {
-                        Play(number);
+                        PlayCall(number);
                     }
                 }
             }

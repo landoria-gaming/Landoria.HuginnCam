@@ -39,7 +39,7 @@ FfmpegPath = C:\ffmpeg\bin\ffmpeg.exe
 
 ## Planned highlights
 
-- Switch smoothly between wide shots, tracking shots, close-ups, and overhead views.
+- Switch smoothly between wide shots, tracking shots, close-ups, and freedom flights.
 - Show the recorded view in a small in-game preview.
 
 ## Controls

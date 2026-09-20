@@ -53,22 +53,32 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ConfigWatcher.cs" />
-    <Compile Include="HuginnCamPlugin.cs" />
-    <Compile Include="Preference.cs" />
-    <Compile Include="RecordingController.cs" />
-    <Compile Include="HuginnCamController.cs" />
-    <Compile Include="HuginnCamAudio.cs" />
-    <Compile Include="HuginnCamEffectMirror.cs" />
-    <Compile Include="HuginnCamFootstepPatch.cs" />
-    <Compile Include="HuginnCamLook.cs" />
-    <Compile Include="HuginnCamOverwatch.cs" />
-    <Compile Include="HuginnCamSpeed.cs" />
-    <Compile Include="HuginnCamTerrain.cs" />
-    <Compile Include="HuginnCamVisibility.cs" />
-    <Compile Include="HuginnCamRig.cs" />
-    <Compile Include="HuginnCamWander.cs" />
-    <Compile Include="HuginnCamInterfaceController.cs" />
+    <Compile Include="Configuration\ConfigWatcher.cs" />
+    <Compile Include="Infrastructure\HuginnCamPlugin.cs" />
+    <Compile Include="Configuration\Preference.cs" />
+    <Compile Include="Recording\RecordingController.cs" />
+    <Compile Include="Camera\HuginnCamController.cs" />
+    <Compile Include="Behaviors\FrightenedFlight\HuginnCamFrightenedFlight.cs" />
+    <Compile Include="Audio\HuginnCamAudio.cs" />
+    <Compile Include="Camera\HuginnCamEffectMirror.cs" />
+    <Compile Include="Behaviors\Shared\HuginnCamLook.cs" />
+    <Compile Include="Behaviors\FreedomFlight\HuginnCamFreedomFlight.cs" />
+    <Compile Include="Behaviors\Shared\HuginnCamSpeed.cs" />
+    <Compile Include="Behaviors\Shared\HuginnCamTerrain.cs" />
+    <Compile Include="Behaviors\Shared\HuginnCamVisibility.cs" />
+    <Compile Include="Camera\HuginnCamRig.cs" />
+    <Compile Include="Infrastructure\BehaviorController\HuginnCamBehaviorController.cs" />
+    <Compile Include="Infrastructure\BehaviorController\HuginnCamBehaviorLogger.cs" />
+    <Compile Include="Behaviors\Shared\HuginnCamFlightProfile.cs" />
+    <Compile Include="Behaviors\CatchUpFlight\HuginnCamCatchUpFlight.cs" />
+    <Compile Include="Audio\HuginnCamAmbientCallScheduler.cs" />
+    <Compile Include="Behaviors\Landing\HuginnCamLanding.cs" />
+    <Compile Include="Behaviors\Resting\HuginnCamResting.cs" />
+    <Compile Include="Behaviors\OrbitFlight\HuginnCamOrbitFlight.cs" />
+    <Compile Include="Behaviors\TrailingFlight\HuginnCamTrailingFlight.cs" />
+    <Compile Include="Behaviors\ObstacleAvoidance\HuginnCamObstacleAvoidance.cs" />
+    <Compile Include="Camera\HuginnCamInterfaceController.cs" />
+    <Compile Include="Camera\HuginnCamMainCamera.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

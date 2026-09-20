@@ -9,6 +9,7 @@ namespace Landoria.HuginnCam
         private const float TerrainClearance = 1f;
         private const float AvoidanceClearance = 1.5f;
         private const float SlopeSampleDistance = 1f;
+        private const float MinimumSignificantSlope = 0.28f;
 
         // Detects terrain that requires an accelerated climbing maneuver.
         internal static bool NeedsAvoidance(Vector3 current, Vector3 desired)
@@ -50,9 +51,10 @@ namespace Landoria.HuginnCam
         }
 
         // Finds the horizontal downhill direction around one terrain position.
-        internal static Vector3 GetDownhillDirection(
-            Vector3 position, Vector3 fallback)
+        internal static bool TryGetDownhillDirection(
+            Vector3 position, out Vector3 direction)
         {
+            direction = Vector3.zero;
             Vector3 right = position + Vector3.right * SlopeSampleDistance;
             Vector3 left = position - Vector3.right * SlopeSampleDistance;
             Vector3 forward = position + Vector3.forward * SlopeSampleDistance;
@@ -64,16 +66,28 @@ namespace Landoria.HuginnCam
             {
                 Vector3 downhill = new Vector3(
                     leftHeight - rightHeight, 0f, backHeight - forwardHeight);
-                if (downhill.sqrMagnitude > 0.001f)
+                if (downhill.magnitude >= MinimumSignificantSlope)
                 {
-                    return downhill.normalized;
+                    direction = downhill.normalized;
+                    return true;
                 }
             }
 
-            fallback.y = 0f;
-            return fallback.sqrMagnitude > 0.001f
-                ? fallback.normalized
-                : Vector3.forward;
+            return false;
+        }
+
+        // Rejects terrain submerged by water at a proposed landing point.
+        internal static bool IsDryLandingPoint(Vector3 position)
+        {
+            if (!TryGetGroundHeight(position, out float groundHeight))
+            {
+                return false;
+            }
+
+            position.y = groundHeight;
+            float waterHeight = Floating.GetLiquidLevel(
+                position, 1f, LiquidType.Water);
+            return waterHeight <= -9999f || groundHeight >= waterHeight + 0.25f;
         }
 
         // Raises a camera position above the local terrain when necessary.
