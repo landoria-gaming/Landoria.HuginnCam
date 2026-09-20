@@ -18,6 +18,8 @@ namespace Landoria.SagaCapture
         private const float CloseOrbitMaximumHeight = 2f;
         private const float CloseOrbitHeightBlendDistance = 1f;
         private const float OrbitRadiusPeriod = 30f;
+        private const float FrontOrbitSpeedMultiplier = 0.5f;
+        private const float RearOrbitSpeedMultiplier = 1.5f;
         private DroneFlightMode _mode;
         private Vector3 _travelDirection = Vector3.forward;
         private float _orbitAngle;
@@ -184,10 +186,16 @@ namespace Landoria.SagaCapture
                                           OrbitRadiusPeriod) * 0.5f;
             float radius = Mathf.Lerp(
                 1f, environment.MaximumOrbitRadius, radiusPhase);
-            _orbitAngle += _orbitDirection * OrbitSpeed /
-                           Mathf.Max(radius, 1f) * Time.deltaTime;
             Vector3 radial = new Vector3(
                 Mathf.Cos(_orbitAngle), 0f, Mathf.Sin(_orbitAngle));
+            float frontAmount = Vector3.Dot(radial, _travelDirection) *
+                                0.5f + 0.5f;
+            float orbitSpeedMultiplier = Mathf.Lerp(
+                RearOrbitSpeedMultiplier, FrontOrbitSpeedMultiplier,
+                frontAmount);
+            _orbitAngle += _orbitDirection * OrbitSpeed *
+                           orbitSpeedMultiplier /
+                           Mathf.Max(radius, 1f) * Time.deltaTime;
             Vector3 target = playerPosition + radial * radius;
             float heightPhase = 0.5f + Mathf.Sin(Time.time * 0.13f) * 0.5f;
             float closeBlend = Mathf.SmoothStep(

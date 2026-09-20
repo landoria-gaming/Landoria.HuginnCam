@@ -51,6 +51,9 @@ The drone has two main flight modes:
   to be defined.
 - When an obstacle is detected, it performs several lightweight trajectory
   simulations with small offsets to the left and right.
+- The player and other creatures count as obstacles for these simulations.
+- Character avoidance uses the camera's 0.75-meter radius. If every lateral route is
+  blocked, the drone retreats instead of continuing through the character.
 - It chooses a lateral trajectory only when that trajectory avoids the first
   detected obstacle.
 - If neither side avoids the obstacle, the drone keeps moving and may pass
@@ -113,6 +116,8 @@ The zones define these flight limits:
 - Its horizontal orbit radius evolves gradually within the active environment
   zone limits.
 - It stays at least 0.5 meters above the terrain.
+- Its 0.75-meter collision radius raises its effective center height to at
+  least 0.75 meters above the terrain.
 - Its terrain clearance increases smoothly from 0.5 to 2 meters as its speed
   rises, reaching the full clearance at 3 meters per second.
 - When it is less than 3 meters horizontally from the player, it stays no
@@ -122,6 +127,8 @@ The zones define these flight limits:
 - It keeps that direction for the entire orbit session.
 - Each new orbit session uses the opposite direction from the previous orbit
   session.
+- It prefers the area in front of the player without forbidding other orbit
+  positions: it slows smoothly in front and moves faster behind the player.
 
 ## Controls
 
@@ -141,6 +148,10 @@ The zones define these flight limits:
 ## Recording
 
 - Keep the secondary-camera creation infrastructure.
+- Start the secondary camera from the gameplay camera's copied pose.
+- Keep it synchronized with the gameplay camera throughout recording warmup.
+- Copy the gameplay camera pose once more immediately before flight begins.
+- Begin autonomous flight only after warmup completes and recording starts.
 - Keep video recording through UnityRuntimeCameraRecorder.
 - Save videos in the user's Windows `My Videos` directory.
 - Use medium recording quality by default.

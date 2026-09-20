@@ -23,6 +23,7 @@ namespace Landoria.SagaCapture
         private readonly DroneLook _look = new DroneLook();
         private readonly DroneFraming _framing = new DroneFraming();
         private readonly SagaCaptureEffects _effects = new SagaCaptureEffects();
+        private bool _flightEnabled;
         private bool _flightInitialized;
 
         internal Camera Camera => _camera;
@@ -53,6 +54,14 @@ namespace Landoria.SagaCapture
             _mainCamera.Take(_camera);
             _camera.targetTexture = null;
             _camera.enabled = true;
+            BeginFlight();
+        }
+
+        // Allows autonomous movement after camera preparation is complete.
+        internal void BeginFlight()
+        {
+            SynchronizePose();
+            _flightEnabled = true;
         }
 
         // Starts invisible rendering for the recording pipeline.
@@ -78,6 +87,11 @@ namespace Landoria.SagaCapture
             Player player = Player.m_localPlayer;
             if (player == null || _camera == null)
             {
+                return;
+            }
+            if (!_flightEnabled)
+            {
+                SynchronizePose();
                 return;
             }
 
@@ -113,7 +127,9 @@ namespace Landoria.SagaCapture
                 targetSpeed = Mathf.Max(targetSpeed, player.m_runSpeed);
             }
             float terrainClearance =
-                _flight.GetTerrainClearance(_motion.Speed);
+                Mathf.Max(
+                    _flight.GetTerrainClearance(_motion.Speed),
+                    DroneTrajectoryPlanner.CameraRadius);
             desired = _trajectory.Plan(
                 position, desired, _motion.Speed, terrainClearance);
             Vector3 next = _motion.Step(position, desired, targetSpeed);

@@ -8,7 +8,8 @@ namespace Landoria.SagaCapture
         private const float RefreshInterval = 0.1f;
         private const float MinimumLookAhead = 4f;
         private const float LookAheadSeconds = 2f;
-        private const float ProbeRadius = 0.35f;
+        internal const float CameraRadius = 0.75f;
+        private const float CharacterRetreatDistance = 2f;
         private const int TerrainSamples = 8;
         private static readonly float[] SideOffsets = { -1f, 1f, -2f, 2f };
         private Vector3 _plannedTarget;
@@ -65,7 +66,41 @@ namespace Landoria.SagaCapture
                 }
             }
 
+            if (HasCharacterObstacle(origin, target, lookAhead))
+            {
+                Vector3 retreat = origin - direction.normalized *
+                                  CharacterRetreatDistance;
+                return RaiseForTerrain(
+                    origin, retreat, lookAhead, terrainClearance);
+            }
+
             return target;
+        }
+
+        // Detects a character so a failed detour never continues through it.
+        private static bool HasCharacterObstacle(
+            Vector3 origin, Vector3 target, float lookAhead)
+        {
+            Vector3 movement = target - origin;
+            float distance = Mathf.Min(movement.magnitude, lookAhead);
+            if (distance < 0.001f)
+            {
+                return false;
+            }
+
+            RaycastHit[] hits = Physics.SphereCastAll(
+                origin, CameraRadius, movement.normalized, distance,
+                Physics.AllLayers, QueryTriggerInteraction.Ignore);
+            foreach (RaycastHit hit in hits)
+            {
+                if (hit.collider != null &&
+                    hit.collider.GetComponentInParent<Character>() != null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // Detects scenery along the speed-scaled start of one route.
@@ -80,11 +115,11 @@ namespace Landoria.SagaCapture
             }
 
             RaycastHit[] hits = Physics.SphereCastAll(
-                origin, ProbeRadius, movement.normalized, distance,
+                origin, CameraRadius, movement.normalized, distance,
                 Physics.AllLayers, QueryTriggerInteraction.Ignore);
             foreach (RaycastHit hit in hits)
             {
-                if (IsScenery(hit.collider))
+                if (IsObstacle(hit.collider))
                 {
                     return true;
                 }
@@ -93,11 +128,10 @@ namespace Landoria.SagaCapture
             return false;
         }
 
-        // Excludes living characters and terrain handled by height sampling.
-        private static bool IsScenery(Collider collider)
+        // Treats characters as obstacles and leaves terrain to height sampling.
+        private static bool IsObstacle(Collider collider)
         {
             return collider != null &&
-                   collider.GetComponentInParent<Character>() == null &&
                    collider.GetComponentInParent<Heightmap>() == null;
         }
 
