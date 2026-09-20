@@ -3,7 +3,7 @@
     <LangVersion>10</LangVersion>
     <RuntimeIdentifiers>win</RuntimeIdentifiers>
   </PropertyGroup>
-  <ItemGroup Condition="'$(MSBuildProjectName)' == 'Landoria.HuginnCam'">
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'Landoria.SagaCapture'">
     <Reference Include="netstandard">
       <HintPath>$(ValheimGamePath)\valheim_Data\Managed\netstandard.dll</HintPath>
       <Private>false</Private>

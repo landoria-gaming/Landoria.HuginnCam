@@ -1,9 +1,9 @@
 using UnityEngine;
 
-namespace Landoria.HuginnCam
+namespace Landoria.SagaCapture
 {
-    // Logs Huginn's player-relative position at a stable one-second interval.
-    internal sealed class HuginnCamPositionLogger
+    // Logs the recorder camera's player-relative position once per second.
+    internal sealed class SagaCapturePositionLogger
     {
         private float _nextLogTime;
 
@@ -19,8 +19,8 @@ namespace Landoria.HuginnCam
             Vector3 relative = cameraPosition - player.transform.position;
             float horizontalDistance = new Vector2(
                 relative.x, relative.z).magnitude;
-            HuginnCamPlugin.Log.LogInfo(
-                $"Huginn relative position: horizontal=({relative.x:F2}, " +
+            SagaCapturePlugin.Log.LogInfo(
+                $"Camera relative position: horizontal=({relative.x:F2}, " +
                 $"{relative.z:F2}) m, vertical={relative.y:F2} m, " +
                 $"horizontalDistance={horizontalDistance:F2} m.");
         }

@@ -7,8 +7,8 @@
     <Platform Condition="'$(Platform)' == ''">AnyCPU</Platform>
     <ProjectGuid>{3A8D7D61-C013-4D86-9962-95E57F7F6685}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>Landoria.HuginnCam</RootNamespace>
-    <AssemblyName>Landoria.HuginnCam</AssemblyName>
+    <RootNamespace>Landoria.SagaCapture</RootNamespace>
+    <AssemblyName>Landoria.SagaCapture</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
     <CameraRecorderAssetUrl>https://github.com/UnityRuntimeCameraRecorder/UnityRuntimeCameraRecorder/releases/download/1.0.0-snapshot/UnityRuntimeCameraRecorder-1.0.0-snapshot-windows-x64.zip</CameraRecorderAssetUrl>
@@ -28,19 +28,13 @@
   <ItemGroup>
     <Reference Include="System" /><Reference Include="System.Core" />
     <Reference Include="BepInEx"><HintPath>$(BepInExPath)\core\BepInEx.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="0Harmony"><HintPath>$(BepInExPath)\core\0Harmony.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_valheim"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\assembly_valheim.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_utils"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\assembly_utils.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="assembly_postprocessing"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\assembly_postprocessing.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.AudioModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnityEngine.ScreenCaptureModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.ScreenCaptureModule.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnityEngine.UI"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="Unity.TextMeshPro"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\Unity.TextMeshPro.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="FFmpegMediaWriter"><HintPath>$(MSBuildProjectDirectory)\lib\FFmpegMediaWriter.dll</HintPath><Private>true</Private></Reference>
     <Reference Include="UnityRuntimeCameraRecorder"><HintPath>$(MSBuildProjectDirectory)\lib\UnityRuntimeCameraRecorder.dll</HintPath><Private>true</Private></Reference>
   </ItemGroup>
@@ -52,32 +46,21 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration\ConfigWatcher.cs" />
-    <Compile Include="Infrastructure\HuginnCamPlugin.cs" />
-    <Compile Include="Infrastructure\HuginnCamPositionLogger.cs" />
     <Compile Include="Configuration\Preference.cs" />
+    <Compile Include="Infrastructure\SagaCapturePlugin.cs" />
+    <Compile Include="Infrastructure\SagaCapturePositionLogger.cs" />
+    <Compile Include="Camera\SagaCaptureAudioListener.cs" />
+    <Compile Include="Camera\SagaCaptureController.cs" />
+    <Compile Include="Camera\SagaCaptureInterfaceController.cs" />
+    <Compile Include="Camera\SagaCaptureMainCamera.cs" />
+    <Compile Include="Camera\SagaCaptureRig.cs" />
+    <Compile Include="Flight\DroneEnvironment.cs" />
+    <Compile Include="Flight\DroneFlightController.cs" />
+    <Compile Include="Flight\DroneFlightMode.cs" />
+    <Compile Include="Flight\DroneLook.cs" />
+    <Compile Include="Flight\DroneMotion.cs" />
+    <Compile Include="Flight\DroneTrajectoryPlanner.cs" />
     <Compile Include="Recording\RecordingController.cs" />
-    <Compile Include="Camera\HuginnCamController.cs" />
-    <Compile Include="Behaviors\CombatObserver\HuginnCamCombatObserver.cs" />
-    <Compile Include="Behaviors\CombatObserver\HuginnCamCombatEvents.cs" />
-    <Compile Include="Behaviors\CombatObserver\HuginnCamDamagePatch.cs" />
-    <Compile Include="Camera\HuginnCamAudioListener.cs" />
-    <Compile Include="Camera\HuginnCamEffectMirror.cs" />
-    <Compile Include="Behaviors\Shared\HuginnCamLook.cs" />
-    <Compile Include="Behaviors\Shared\HuginnCamSpeed.cs" />
-    <Compile Include="Behaviors\Shared\HuginnCamTerrain.cs" />
-    <Compile Include="Behaviors\Shared\HuginnCamTreeAvoidance.cs" />
-    <Compile Include="Camera\HuginnCamRig.cs" />
-    <Compile Include="Infrastructure\BehaviorController\HuginnCamBehaviorController.cs" />
-    <Compile Include="Infrastructure\BehaviorController\HuginnCamBehaviorState.cs" />
-    <Compile Include="Infrastructure\BehaviorController\HuginnCamBehaviorStateMachine.cs" />
-    <Compile Include="Behaviors\Shared\HuginnCamFlightProfile.cs" />
-    <Compile Include="Behaviors\Shared\HuginnCamForestAwareness.cs" />
-    <Compile Include="Behaviors\CatchUpFlight\HuginnCamCatchUpFlight.cs" />
-    <Compile Include="Behaviors\ObserverFlight\HuginnCamObserverFlight.cs" />
-    <Compile Include="Behaviors\TrailingFlight\HuginnCamTrailingFlight.cs" />
-    <Compile Include="Behaviors\TrailingFlight\HuginnCamTrailingObstacleAvoidance.cs" />
-    <Compile Include="Camera\HuginnCamInterfaceController.cs" />
-    <Compile Include="Camera\HuginnCamMainCamera.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

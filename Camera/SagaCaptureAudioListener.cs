@@ -1,9 +1,9 @@
 using UnityEngine;
 
-namespace Landoria.HuginnCam
+namespace Landoria.SagaCapture
 {
     // Locates the listener used by Valheim's gameplay audio mix.
-    internal static class HuginnCamAudioListener
+    internal static class SagaCaptureAudioListener
     {
         // Finds Valheim's active listener even when it is outside Camera.main.
         internal static AudioListener FindActive(Camera gameplayCamera)

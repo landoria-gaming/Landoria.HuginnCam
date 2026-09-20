@@ -21,19 +21,17 @@ namespace Landoria.Shared
         private static long ignoredWriteTicks;
         private static string displayName;
         private static Action restoreDefaults;
-        private static Action applyConfiguration;
 
         // Starts watching the active configuration file.
-        internal static void Initialize(ConfigFile configFile, ManualLogSource logSource,
-            string configurationDisplayName, Action restoreDefaultsAction,
-            Action applyConfigurationAction = null)
+        internal static void Initialize(
+            ConfigFile configFile, ManualLogSource logSource,
+            string configurationDisplayName, Action restoreDefaultsAction)
         {
             Dispose();
             config = configFile;
             logger = logSource;
             displayName = configurationDisplayName;
             restoreDefaults = restoreDefaultsAction;
-            applyConfiguration = applyConfigurationAction;
             configPath = Path.GetFullPath(config.ConfigFilePath);
             watcher = new FileSystemWatcher(
                 Path.GetDirectoryName(configPath), Path.GetFileName(configPath));
@@ -57,19 +55,22 @@ namespace Landoria.Shared
             try
             {
                 Interlocked.Exchange(
-                    ref ignoredWriteTicks, File.GetLastWriteTimeUtc(configPath).Ticks);
+                    ref ignoredWriteTicks,
+                    File.GetLastWriteTimeUtc(configPath).Ticks);
                 Interlocked.Exchange(ref reloadPending, 0);
             }
             catch (IOException)
             {
-                logger?.LogDebug("Could not mark the internal configuration write.");
+                logger?.LogDebug(
+                    "Could not mark the internal configuration write.");
             }
         }
 
         // Reloads a pending change safely from Unity's main thread.
         internal static void Update()
         {
-            if (Volatile.Read(ref reloadPending) == 0 || !ReloadDelayElapsed())
+            if (Volatile.Read(ref reloadPending) == 0 ||
+                !ReloadDelayElapsed())
             {
                 return;
             }
@@ -87,7 +88,6 @@ namespace Landoria.Shared
                     config.Reload();
                 }
 
-                applyConfiguration?.Invoke();
                 reloadAttempts = 0;
                 logger.LogInfo(recreated
                     ? "Recreated the deleted configuration with default values."
@@ -115,11 +115,11 @@ namespace Landoria.Shared
             reloadAttempts = 0;
             displayName = null;
             restoreDefaults = null;
-            applyConfiguration = null;
         }
 
         // Records a normal file-system change for the main thread.
-        private static void OnChanged(object sender, FileSystemEventArgs eventArgs)
+        private static void OnChanged(
+            object sender, FileSystemEventArgs eventArgs)
         {
             QueueReload();
         }
@@ -165,17 +165,20 @@ namespace Landoria.Shared
         {
             long elapsed = DateTime.UtcNow.Ticks -
                            Interlocked.Read(ref lastChangeTicks);
-            return elapsed >= TimeSpan.TicksPerMillisecond * ReloadDelayMilliseconds;
+            return elapsed >= TimeSpan.TicksPerMillisecond *
+                   ReloadDelayMilliseconds;
         }
 
         // Retries temporary file access failures without blocking Unity.
         private static void RetryReload(Exception exception)
         {
             reloadAttempts++;
-            logger.LogWarning($"Configuration reload failed: {exception.Message}");
+            logger.LogWarning(
+                $"Configuration reload failed: {exception.Message}");
             if (reloadAttempts < MaximumReloadAttempts)
             {
-                Interlocked.Exchange(ref lastChangeTicks, DateTime.UtcNow.Ticks);
+                Interlocked.Exchange(
+                    ref lastChangeTicks, DateTime.UtcNow.Ticks);
                 Interlocked.Exchange(ref reloadPending, 1);
             }
         }

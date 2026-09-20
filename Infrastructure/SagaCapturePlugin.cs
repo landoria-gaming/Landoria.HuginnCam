@@ -2,22 +2,19 @@ using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using Landoria.Shared;
-using HarmonyLib;
 using UnityEngine;
 
-namespace Landoria.HuginnCam
+namespace Landoria.SagaCapture
 {
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
-    // Provides the entry point for the autonomous Huginn camera recorder.
-    public sealed class HuginnCamPlugin : BaseUnityPlugin
+    // Provides the entry point for the Saga Capture plugin.
+    public sealed class SagaCapturePlugin : BaseUnityPlugin
     {
-        private const string PluginGuid = "Landoria.HuginnCam";
-        private const string PluginName = "Landoria.HuginnCam";
+        private const string PluginGuid = "Landoria.SagaCapture";
+        private const string PluginName = "Landoria.SagaCapture";
         private const string PluginVersion = "1.0.0";
-        private HuginnCamController _cameraController;
+        private SagaCaptureController _cameraController;
         private RecordingController _recordingController;
-        private Harmony _harmony;
-
         internal static ManualLogSource Log { get; private set; }
 
         // Initializes the plugin logging.
@@ -26,31 +23,26 @@ namespace Landoria.HuginnCam
             Log = Logger;
             Logger.LogInfo($"AssemblyVersion: {GetType().Assembly.GetName().Version}.");
             Preference.Initialize(Config);
-            _harmony = new Harmony(PluginGuid);
-            _harmony.PatchAll();
             ConfigWatcher.Initialize(
-                Config,
-                Logger,
-                "Huginn Cam",
+                Config, Logger, "Saga Capture",
                 () => Preference.RestoreDefaults(Config));
-            _cameraController = gameObject.AddComponent<HuginnCamController>();
+            _cameraController = gameObject.AddComponent<SagaCaptureController>();
             _recordingController = gameObject.AddComponent<RecordingController>();
             Log.LogInfo($"{PluginName} {PluginVersion} is loaded.");
         }
 
-        // Reloads configuration and handles the recording shortcut.
+        // Reloads configuration and handles camera and recording controls.
         private void Update()
         {
             ConfigWatcher.Update();
             bool exitRequested = ZInput.GetKeyDown(KeyCode.Escape) ||
-                                 IsMainKeyDown(Preference.RecordingShortcut);
+                                 IsMainKeyDown(Preference.CaptureModeShortcut);
             if (_cameraController.IsActive)
             {
                 if (exitRequested)
                 {
                     _cameraController.ToggleCamera();
                 }
-
                 return;
             }
 
@@ -60,15 +52,14 @@ namespace Landoria.HuginnCam
                 {
                     _recordingController.StopRecording();
                 }
-
                 return;
             }
 
-            if (IsShortcutDown(Preference.HuginnCamShortcut))
+            if (IsShortcutDown(Preference.PreviewModeShortcut))
             {
                 _cameraController.ToggleCamera();
             }
-            else if (IsShortcutDown(Preference.RecordingShortcut))
+            else if (IsShortcutDown(Preference.CaptureModeShortcut))
             {
                 _recordingController.StartRecording();
             }
@@ -94,10 +85,11 @@ namespace Landoria.HuginnCam
             return true;
         }
 
-        // Treats either Shift key as the default Huginn camera modifier.
+        // Treats either Shift key as the configured Shift modifier.
         private static bool IsModifierDown(KeyCode modifier)
         {
-            if (modifier == KeyCode.LeftShift || modifier == KeyCode.RightShift)
+            if (modifier == KeyCode.LeftShift ||
+                modifier == KeyCode.RightShift)
             {
                 return ZInput.GetKey(KeyCode.LeftShift) ||
                        ZInput.GetKey(KeyCode.RightShift);
@@ -106,25 +98,22 @@ namespace Landoria.HuginnCam
             return ZInput.GetKey(modifier);
         }
 
-        // Checks only the main key so every active mode can be exited.
+        // Checks only the main key so active modes share their exit control.
         private static bool IsMainKeyDown(KeyboardShortcut shortcut)
         {
             return shortcut.MainKey != KeyCode.None &&
                    ZInput.GetKeyDown(shortcut.MainKey);
         }
 
-        // Releases plugin resources when BepInEx unloads the plugin.
+        // Logs plugin shutdown when BepInEx unloads the assembly.
         private void OnDestroy()
         {
             ConfigWatcher.Dispose();
-            _harmony?.UnpatchSelf();
-            _harmony = null;
             _recordingController?.Shutdown();
             _recordingController = null;
             _cameraController?.Shutdown();
             _cameraController = null;
             Log?.LogInfo($"{PluginName} {PluginVersion} is unloaded.");
-
             Log = null;
         }
     }

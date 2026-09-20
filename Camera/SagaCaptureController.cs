@@ -1,20 +1,20 @@
 using System;
 using UnityEngine;
 
-namespace Landoria.HuginnCam
+namespace Landoria.SagaCapture
 {
-    // Switches between the gameplay and Huginn cameras without blocking input.
-    internal sealed class HuginnCamController : MonoBehaviour
+    // Switches between the gameplay and secondary cameras without blocking input.
+    internal sealed class SagaCaptureController : MonoBehaviour
     {
-        private HuginnCamRig _cameraRig;
+        private SagaCaptureRig _cameraRig;
         private Camera _gameplayCamera;
         private bool _gameplayCameraWasEnabled;
-        private readonly HuginnCamInterfaceController _interface =
-            new HuginnCamInterfaceController();
+        private readonly SagaCaptureInterfaceController _interface =
+            new SagaCaptureInterfaceController();
 
         internal bool IsActive => _cameraRig != null;
 
-        // Keeps the interface hidden while Huginn camera mode is active.
+        // Keeps the interface hidden while camera mode is active.
         private void Update()
         {
             if (IsActive)
@@ -23,7 +23,7 @@ namespace Landoria.HuginnCam
             }
         }
 
-        // Switches to or from the Huginn camera.
+        // Switches to or from the secondary camera.
         internal void ToggleCamera()
         {
             if (IsActive)
@@ -36,34 +36,40 @@ namespace Landoria.HuginnCam
             }
         }
 
-        // Creates and displays the Huginn camera.
+        // Creates and displays the secondary camera.
         private void StartPreview()
         {
             try
             {
                 _gameplayCamera = Camera.main;
-                if (Player.m_localPlayer == null || _gameplayCamera == null)
-                {
-                    throw new InvalidOperationException("The local player camera is unavailable.");
-                }
-
+                ValidateGameplayCamera();
                 _gameplayCameraWasEnabled = _gameplayCamera.enabled;
-                _cameraRig = gameObject.AddComponent<HuginnCamRig>();
+                _cameraRig = gameObject.AddComponent<SagaCaptureRig>();
                 _cameraRig.Initialize(_gameplayCamera);
                 _gameplayCamera.enabled = false;
                 _cameraRig.BeginPreview();
                 _interface.Hide();
-                Notify("Huginn Cam enabled.");
+                Notify("Saga Capture PreviewMode enabled.");
             }
             catch (Exception exception)
             {
-                HuginnCamPlugin.Log.LogError(exception);
-                Notify($"Huginn Cam failed: {exception.Message}");
+                SagaCapturePlugin.Log.LogError(exception);
+                Notify($"Saga Capture failed: {exception.Message}");
                 StopPreview();
             }
         }
 
-        // Restores the original gameplay camera and audio listener.
+        // Ensures the player camera exists before creating its clone.
+        private void ValidateGameplayCamera()
+        {
+            if (Player.m_localPlayer == null || _gameplayCamera == null)
+            {
+                throw new InvalidOperationException(
+                    "The local player camera is unavailable.");
+            }
+        }
+
+        // Restores the original gameplay camera and listener.
         private void StopPreview()
         {
             if (_cameraRig != null)
@@ -72,18 +78,16 @@ namespace Landoria.HuginnCam
                 Destroy(_cameraRig);
                 _cameraRig = null;
             }
-
             if (_gameplayCamera != null)
             {
                 _gameplayCamera.enabled = _gameplayCameraWasEnabled;
                 _gameplayCamera = null;
             }
-
             _interface.Restore();
-            Notify("Huginn Cam disabled.");
+            Notify("Saga Capture PreviewMode disabled.");
         }
 
-        // Restores the gameplay view before the plugin is unloaded.
+        // Restores the gameplay view before plugin unload.
         internal void Shutdown()
         {
             if (IsActive)
@@ -95,7 +99,8 @@ namespace Landoria.HuginnCam
         // Displays a local status message when a player is available.
         private static void Notify(string message)
         {
-            Player.m_localPlayer?.Message(MessageHud.MessageType.TopLeft, message);
+            Player.m_localPlayer?.Message(
+                MessageHud.MessageType.TopLeft, message);
         }
     }
 }

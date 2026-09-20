@@ -1,9 +1,9 @@
 using UnityEngine;
 
-namespace Landoria.HuginnCam
+namespace Landoria.SagaCapture
 {
-    // Transfers Unity's MainCamera identity while Huginn owns the visible view.
-    internal sealed class HuginnCamMainCamera
+    // Transfers Unity's MainCamera identity to the recorder camera.
+    internal sealed class SagaCaptureMainCamera
     {
         private Camera _source;
         private string _sourceTag;
@@ -15,10 +15,10 @@ namespace Landoria.HuginnCam
             _source = source;
         }
 
-        // Makes Valheim evaluate spatial systems from Huginn's position.
-        internal void Take(Camera huginn)
+        // Makes Valheim evaluate spatial systems from the recorder camera.
+        internal void Take(Camera recorderCamera)
         {
-            if (_source == null || huginn == null ||
+            if (_source == null || recorderCamera == null ||
                 !_source.CompareTag("MainCamera"))
             {
                 return;
@@ -26,21 +26,21 @@ namespace Landoria.HuginnCam
 
             _sourceTag = _source.tag;
             _source.tag = "Untagged";
-            huginn.tag = "MainCamera";
+            recorderCamera.tag = "MainCamera";
             _ownsTag = true;
         }
 
-        // Restores the gameplay camera before Huginn's camera is destroyed.
-        internal void Restore(Camera huginn)
+        // Restores the gameplay camera before the recorder camera is destroyed.
+        internal void Restore(Camera recorderCamera)
         {
             if (!_ownsTag)
             {
                 return;
             }
 
-            if (huginn != null)
+            if (recorderCamera != null)
             {
-                huginn.tag = "Untagged";
+                recorderCamera.tag = "Untagged";
             }
             if (_source != null)
             {
