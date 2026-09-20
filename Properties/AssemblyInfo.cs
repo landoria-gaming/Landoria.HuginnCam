@@ -2,7 +2,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("Landoria.HuginnCam")]
-[assembly: AssemblyDescription("An autonomous cinematic follow camera for Valheim.")]
+[assembly: AssemblyDescription("An autonomous Huginn follow camera for Valheim.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Landoria")]
 [assembly: AssemblyProduct("Landoria.HuginnCam")]

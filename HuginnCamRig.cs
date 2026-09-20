@@ -6,35 +6,28 @@ using UnityEngine.PostProcessing;
 
 namespace Landoria.HuginnCam
 {
-    // Maintains a collision-aware cinematic camera behind the player.
-    internal sealed class CinematicCameraRig : MonoBehaviour
+    // Maintains the autonomous Huginn camera around the player.
+    internal sealed class HuginnCamRig : MonoBehaviour
     {
-        // Associates a source image effect with its independent camera copy.
-        private sealed class EffectMirror
-        {
-            internal readonly Component Source;
-            internal readonly Component Destination;
-
-            // Stores the two components participating in a settings mirror.
-            internal EffectMirror(Component source, Component destination)
-            {
-                Source = source;
-                Destination = destination;
-            }
-        }
-
         private const float HeadHeight = 1.7f;
-        private const float HeightAboveHead = 2f;
-        private const float DistanceBehind = 5f;
+        private const float DirectionTurnSpeed = 0.75f;
+        private const float DestinationAdvanceDistance = 1f;
         private Camera _camera;
         private AudioListener _listener;
         private AudioListener _originalListener;
+        private HuginnCamAudio _audio;
         private RenderTexture _offscreenTarget;
-        private readonly List<EffectMirror> _effectMirrors = new List<EffectMirror>();
+        private Vector3 _movementDirection;
+        private bool _poseInitialized;
+        private readonly HuginnCamSpeed _speed = new HuginnCamSpeed();
+        private readonly HuginnCamLook _look = new HuginnCamLook();
+        private readonly HuginnCamWander _wander = new HuginnCamWander();
+        private readonly HuginnCamOverwatch _overwatch = new HuginnCamOverwatch();
+        private readonly List<HuginnCamEffectMirror> _effectMirrors =
+            new List<HuginnCamEffectMirror>();
         private static readonly Dictionary<Type, FieldInfo[]> SerializableFields =
             new Dictionary<Type, FieldInfo[]>();
         private static readonly HashSet<string> WarnedUnclassifiedComponents = new HashSet<string>();
-
         internal Camera Camera => _camera;
         internal AudioListener Listener => _listener;
         internal RenderTexture PreparedTarget => _offscreenTarget;
@@ -42,9 +35,11 @@ namespace Landoria.HuginnCam
         // Clones the gameplay camera and optionally transfers audio listening to it.
         internal void Initialize(Camera sourceCamera, bool transferAudio = true)
         {
-            GameObject cameraObject = new GameObject("HuginnCamCinematicCamera");
+            GameObject cameraObject = new GameObject("HuginnCamCamera");
             cameraObject.transform.SetParent(transform, false);
             _camera = cameraObject.AddComponent<Camera>();
+            _audio = cameraObject.AddComponent<HuginnCamAudio>();
+            _audio.Initialize();
             _camera.CopyFrom(sourceCamera);
             _camera.depth = sourceCamera.depth + 1f;
             _camera.enabled = false;
@@ -62,7 +57,13 @@ namespace Landoria.HuginnCam
 
             UpdatePose();
         }
-
+        // Displays the Huginn camera directly on the player's screen.
+        internal void BeginPreview()
+        {
+            EndOffscreenRendering();
+            _camera.targetTexture = null;
+            _camera.enabled = true;
+        }
         // Recreates safe visual effects in their source order and mirrors their settings.
         private void CopyVisualEffectStack(Camera sourceCamera, GameObject target)
         {
@@ -101,10 +102,9 @@ namespace Landoria.HuginnCam
                     destinationBehaviour.enabled = sourceBehaviour.enabled;
                 }
 
-                _effectMirrors.Add(new EffectMirror(source, destination));
+                _effectMirrors.Add(new HuginnCamEffectMirror(source, destination));
             }
         }
-
         // Identifies camera infrastructure that must not be duplicated on a secondary camera.
         private static bool IsExcludedCameraComponent(string typeName)
         {
@@ -122,7 +122,6 @@ namespace Landoria.HuginnCam
                     return false;
             }
         }
-
         // Identifies image effects that are safe to instantiate on an independent camera.
         private static bool IsMirroredVisualEffect(string typeName)
         {
@@ -139,11 +138,10 @@ namespace Landoria.HuginnCam
                     return false;
             }
         }
-
         // Synchronizes environment-dependent serialized settings without sharing runtime resources.
         private void SynchronizeVisualEffects()
         {
-            foreach (EffectMirror mirror in _effectMirrors)
+            foreach (HuginnCamEffectMirror mirror in _effectMirrors)
             {
                 if (mirror.Source == null || mirror.Destination == null)
                 {
@@ -158,7 +156,6 @@ namespace Landoria.HuginnCam
                 }
             }
         }
-
         // Copies only Unity-serialized fields and excludes private runtime state.
         private static void CopySerializedSettings(Component source, Component destination)
         {
@@ -167,7 +164,6 @@ namespace Landoria.HuginnCam
                 field.SetValue(destination, field.GetValue(source));
             }
         }
-
         // Discovers and caches public or explicitly serialized fields for one effect type.
         private static FieldInfo[] GetSerializableFields(Type type)
         {
@@ -194,7 +190,6 @@ namespace Landoria.HuginnCam
             SerializableFields[type] = cached;
             return cached;
         }
-
         // Starts invisible rendering so this camera can establish its own automatic exposure.
         internal void BeginWarmup(
             int requestedWidth = 0,
@@ -219,13 +214,11 @@ namespace Landoria.HuginnCam
             _camera.targetTexture = _offscreenTarget;
             _camera.enabled = true;
         }
-
         // Stops invisible warmup rendering while preserving the camera's exposure history.
         internal void EndWarmup()
         {
             EndOffscreenRendering();
         }
-
         // Stops offscreen rendering and releases its render texture.
         private void EndOffscreenRendering()
         {
@@ -242,8 +235,7 @@ namespace Landoria.HuginnCam
                 _offscreenTarget = null;
             }
         }
-
-        // Applies the gameplay camera's color grading and exposure profile to the cinematic camera.
+        // Applies the gameplay camera's color grading and exposure profile to the Huginn camera.
         private static void CopyPostProcessing(Camera sourceCamera, GameObject target)
         {
             PostProcessingBehaviour source = sourceCamera.GetComponent<PostProcessingBehaviour>();
@@ -263,7 +255,7 @@ namespace Landoria.HuginnCam
             UpdatePose();
         }
 
-        // Restores the gameplay listener and destroys the cinematic camera.
+        // Restores the gameplay listener and destroys the Huginn camera.
         internal void Dispose()
         {
             EndWarmup();
@@ -282,7 +274,7 @@ namespace Landoria.HuginnCam
             }
         }
 
-        // Places the camera behind the player and keeps a clear line of sight.
+        // Smoothly follows the player while keeping a clear line of sight.
         private void UpdatePose()
         {
             Player player = Player.m_localPlayer;
@@ -292,38 +284,116 @@ namespace Landoria.HuginnCam
             }
 
             Vector3 head = player.transform.position + Vector3.up * HeadHeight;
-            Vector3 forward = Vector3.ProjectOnPlane(player.transform.forward, Vector3.up).normalized;
-            if (forward.sqrMagnitude < 0.001f)
+            Vector3 desired = _wander.GetTarget(player);
+            _overwatch.Update(
+                player, _wander.IsPlayerMoving,
+                _camera.transform.position,
+                _movementDirection * _speed.Current,
+                ref desired);
+            _audio.HandleOverwatch(_overwatch);
+            if (_overwatch.TryTakeExitVelocity(out Vector3 exitVelocity) &&
+                exitVelocity.sqrMagnitude > 0.001f)
             {
-                forward = Vector3.forward;
+                _movementDirection = exitVelocity.normalized;
+                _speed.MatchCurrent(exitVelocity.magnitude);
+            }
+            bool avoidingObstacle =
+                !HuginnCamVisibility.HasClearSight(player, head, desired) ||
+                !HuginnCamVisibility.HasClearSight(
+                    player, head, _camera.transform.position);
+            if (avoidingObstacle)
+            {
+                _wander.RetrySoon();
             }
 
-            Vector3 desired = head + Vector3.up * HeightAboveHead - forward * DistanceBehind;
-            _camera.transform.position = ResolveCollision(head, desired);
-            _camera.transform.rotation = CreateLevelRotation(head - _camera.transform.position);
-        }
-
-        // Creates a look rotation with an explicit zero roll so the horizon remains level.
-        private static Quaternion CreateLevelRotation(Vector3 direction)
-        {
-            Vector3 normalized = direction.normalized;
-            float yaw = Mathf.Atan2(normalized.x, normalized.z) * Mathf.Rad2Deg;
-            float pitch = -Mathf.Asin(Mathf.Clamp(normalized.y, -1f, 1f)) * Mathf.Rad2Deg;
-            return Quaternion.Euler(pitch, yaw, 0f);
-        }
-
-        // Pulls the camera in front of the nearest obstacle along the sight line.
-        private static Vector3 ResolveCollision(Vector3 focus, Vector3 desired)
-        {
-            Vector3 direction = desired - focus;
-            float distance = direction.magnitude;
-            if (Physics.SphereCast(focus, 0.2f, direction.normalized, out RaycastHit hit, distance,
-                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            if (!_poseInitialized)
             {
-                return focus + direction.normalized * Mathf.Max(0.3f, hit.distance - 0.25f);
+                _camera.transform.position = desired;
+                _look.Snap(_camera.transform, head);
+                _movementDirection = player.transform.forward.normalized;
+                _speed.Initialize();
+                _poseInitialized = true;
+                return;
             }
 
-            return desired;
+            bool perched = _wander.UpdatePerch(
+                _camera.transform.position, desired);
+            if (_overwatch.IsHolding)
+            {
+                Vector3 next = _overwatch.Follow(
+                    _camera.transform.position, desired);
+                _camera.transform.position = HuginnCamTerrain.ResolveMovement(
+                    _camera.transform.position, next, false);
+                if (_overwatch.FollowVelocity.sqrMagnitude > 0.001f)
+                {
+                    _movementDirection = _overwatch.FollowVelocity.normalized;
+                    _speed.MatchCurrent(_overwatch.FollowVelocity.magnitude);
+                }
+            }
+            else if (!perched)
+            {
+                MoveCamera(
+                    player, ref desired, avoidingObstacle, _overwatch.IsActive);
+            }
+            if (!HuginnCamVisibility.HasClearSight(
+                player, head, _camera.transform.position))
+            {
+                _wander.RetrySoon();
+            }
+
+            if (_overwatch.IsHolding)
+            {
+                _look.UpdateHorizon(
+                    _camera.transform, player.transform.forward);
+            }
+            else
+            {
+                _look.Update(_camera.transform, head);
+            }
+        }
+
+        // Moves continuously at cruise speed and catches up only when far behind.
+        private void MoveCamera(
+            Player player, ref Vector3 desired, bool avoidingObstacle,
+            bool preserveDestination)
+        {
+            bool avoidingTerrain = !_wander.IsLanding &&
+                HuginnCamTerrain.NeedsAvoidance(
+                    _camera.transform.position, desired);
+            if (avoidingTerrain)
+            {
+                desired.y = Mathf.Max(
+                    desired.y, _camera.transform.position.y + 2f);
+            }
+
+            Vector3 offset = desired - _camera.transform.position;
+            if (!preserveDestination &&
+                offset.magnitude <= DestinationAdvanceDistance)
+            {
+                _wander.AdvanceNow();
+                desired = _wander.GetTarget(player);
+                offset = desired - _camera.transform.position;
+            }
+
+            Vector3 targetDirection = offset.sqrMagnitude > 0.001f
+                ? offset.normalized
+                : _movementDirection;
+            _movementDirection = Vector3.RotateTowards(
+                _movementDirection,
+                targetDirection,
+                DirectionTurnSpeed * Time.deltaTime,
+                0f).normalized;
+            float speed = _speed.Update(
+                offset.magnitude, avoidingObstacle || avoidingTerrain);
+            Vector3 nextPosition = _camera.transform.position +
+                                   _movementDirection * speed * Time.deltaTime;
+            if (!preserveDestination)
+            {
+                nextPosition = _wander.KeepOutsideMinimumRadius(
+                    player, nextPosition);
+            }
+            _camera.transform.position = HuginnCamTerrain.ResolveMovement(
+                _camera.transform.position, nextPosition, _wander.IsLanding);
         }
     }
 }

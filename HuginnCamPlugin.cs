@@ -7,13 +7,14 @@ using UnityEngine;
 namespace Landoria.HuginnCam
 {
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
-    // Provides the entry point for the autonomous cinematic camera recorder.
+    // Provides the entry point for the autonomous Huginn camera recorder.
     public sealed class HuginnCamPlugin : BaseUnityPlugin
     {
         private const string PluginGuid = "Landoria.HuginnCam";
         private const string PluginName = "Landoria.HuginnCam";
         private const string PluginVersion = "1.0.0";
-        private bool _isRecording;
+        private HuginnCamController _cameraController;
+        private RecordingController _recordingController;
 
         internal static ManualLogSource Log { get; private set; }
 
@@ -28,6 +29,8 @@ namespace Landoria.HuginnCam
                 Logger,
                 "Huginn Cam",
                 () => Preference.RestoreDefaults(Config));
+            _cameraController = gameObject.AddComponent<HuginnCamController>();
+            _recordingController = gameObject.AddComponent<RecordingController>();
             Log.LogInfo($"{PluginName} {PluginVersion} is loaded.");
         }
 
@@ -35,16 +38,41 @@ namespace Landoria.HuginnCam
         private void Update()
         {
             ConfigWatcher.Update();
-            if (IsRecordingShortcutDown())
+            bool exitRequested = ZInput.GetKeyDown(KeyCode.Escape) ||
+                                 IsMainKeyDown(Preference.RecordingShortcut);
+            if (_cameraController.IsActive)
             {
-                ToggleRecording();
+                if (exitRequested)
+                {
+                    _cameraController.ToggleCamera();
+                }
+
+                return;
+            }
+
+            if (_recordingController.IsActive)
+            {
+                if (exitRequested)
+                {
+                    _recordingController.StopRecording();
+                }
+
+                return;
+            }
+
+            if (IsShortcutDown(Preference.HuginnCamShortcut))
+            {
+                _cameraController.ToggleCamera();
+            }
+            else if (IsShortcutDown(Preference.RecordingShortcut))
+            {
+                _recordingController.StartRecording();
             }
         }
 
         // Checks the configured shortcut and all its modifiers.
-        private static bool IsRecordingShortcutDown()
+        private static bool IsShortcutDown(KeyboardShortcut shortcut)
         {
-            KeyboardShortcut shortcut = Preference.RecordingShortcut;
             if (shortcut.MainKey == KeyCode.None ||
                 !ZInput.GetKeyDown(shortcut.MainKey))
             {
@@ -53,7 +81,7 @@ namespace Landoria.HuginnCam
 
             foreach (KeyCode modifier in shortcut.Modifiers)
             {
-                if (!ZInput.GetKey(modifier))
+                if (!IsModifierDown(modifier))
                 {
                     return false;
                 }
@@ -62,19 +90,33 @@ namespace Landoria.HuginnCam
             return true;
         }
 
-        // Toggles the placeholder recording state.
-        private void ToggleRecording()
+        // Treats either Shift key as the default Huginn camera modifier.
+        private static bool IsModifierDown(KeyCode modifier)
         {
-            _isRecording = !_isRecording;
-            Log.LogInfo(_isRecording
-                ? "Video recording requested."
-                : "Video recording stop requested.");
+            if (modifier == KeyCode.LeftShift || modifier == KeyCode.RightShift)
+            {
+                return ZInput.GetKey(KeyCode.LeftShift) ||
+                       ZInput.GetKey(KeyCode.RightShift);
+            }
+
+            return ZInput.GetKey(modifier);
+        }
+
+        // Checks only the main key so every active mode can be exited.
+        private static bool IsMainKeyDown(KeyboardShortcut shortcut)
+        {
+            return shortcut.MainKey != KeyCode.None &&
+                   ZInput.GetKeyDown(shortcut.MainKey);
         }
 
         // Releases plugin resources when BepInEx unloads the plugin.
         private void OnDestroy()
         {
             ConfigWatcher.Dispose();
+            _recordingController?.Shutdown();
+            _recordingController = null;
+            _cameraController?.Shutdown();
+            _cameraController = null;
             Log?.LogInfo($"{PluginName} {PluginVersion} is unloaded.");
 
             Log = null;
