@@ -12,6 +12,7 @@ namespace Landoria.SagaCapture
         private static ConfigEntry<UnityRuntimeCameraRecorder.RecordingQualityPreset>
             recordingQuality;
         private static ConfigEntry<int> maximumFrameRate;
+        private static ConfigEntry<float> sagaCameraFov;
 
         internal static KeyboardShortcut CaptureModeShortcut =>
             captureModeShortcut.Value;
@@ -20,6 +21,7 @@ namespace Landoria.SagaCapture
         internal static UnityRuntimeCameraRecorder.RecordingQualityPreset RecordingQuality =>
             recordingQuality.Value;
         internal static int MaximumFrameRate => maximumFrameRate.Value;
+        internal static float SagaCameraFOV => sagaCameraFov.Value;
 
         // Creates the saved shortcut configuration entries.
         internal static void Initialize(ConfigFile config)
@@ -48,6 +50,13 @@ namespace Landoria.SagaCapture
                 new ConfigDescription(
                     "Maximum recording frame rate, from 30 to 60 FPS.",
                     new AcceptableValueRange<int>(30, 60)));
+            sagaCameraFov = config.Bind(
+                "Camera",
+                "SagaCameraFOV",
+                65f,
+                new ConfigDescription(
+                    "Saga camera vertical field of view, from 40 to 120 degrees.",
+                    new AcceptableValueRange<float>(40f, 120f)));
         }
 
         // Restores the default shortcuts and recreates the configuration file.
@@ -59,6 +68,7 @@ namespace Landoria.SagaCapture
             recordingQuality.Value =
                 UnityRuntimeCameraRecorder.RecordingQualityPreset.Medium;
             maximumFrameRate.Value = 30;
+            sagaCameraFov.Value = 65f;
             config.Save();
             ConfigWatcher.IgnoreCurrentFileVersion();
         }

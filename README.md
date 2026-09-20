@@ -12,6 +12,7 @@ SagaCapture records Valheim gameplay from a configurable secondary camera.
 - Save MP4 recordings to the Windows `My Videos` directory.
 - Reload the BepInEx configuration when it changes on disk.
 - Configure recording quality and a frame-rate limit from 30 to 60 FPS.
+- Configure `SagaCameraFOV` from 40 to 120 degrees; its default is 65.
 
 The secondary camera currently follows the gameplay camera directly. New camera
 behavior will be implemented on top of this minimal foundation.

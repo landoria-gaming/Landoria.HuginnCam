@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 
 namespace Landoria.SagaCapture
@@ -6,9 +7,15 @@ namespace Landoria.SagaCapture
     // Switches between the gameplay and secondary cameras without blocking input.
     internal sealed class SagaCaptureController : MonoBehaviour
     {
+        private const int MinimumWarmupFrames = 8;
+        private const float MinimumWarmupSeconds = 0.5f;
         private SagaCaptureRig _cameraRig;
         private Camera _gameplayCamera;
         private bool _gameplayCameraWasEnabled;
+        private Coroutine _previewWarmupRoutine;
+        private readonly SagaCaptureReturnTransition _returnTransition =
+            new SagaCaptureReturnTransition();
+        private bool _returning;
         private readonly SagaCaptureInterfaceController _interface =
             new SagaCaptureInterfaceController();
 
@@ -28,11 +35,28 @@ namespace Landoria.SagaCapture
         {
             if (IsActive)
             {
-                StopPreview();
+                RequestStopPreview();
             }
             else
             {
                 StartPreview();
+            }
+        }
+
+        // Advances the smooth return after all normal camera updates.
+        private void LateUpdate()
+        {
+            if (!_returning || _cameraRig?.Camera == null ||
+                _gameplayCamera == null)
+            {
+                return;
+            }
+
+            if (_returnTransition.Step(
+                    _cameraRig.Camera, _gameplayCamera.transform,
+                    Time.deltaTime))
+            {
+                CompleteStopPreview();
             }
         }
 
@@ -46,16 +70,36 @@ namespace Landoria.SagaCapture
                 _gameplayCameraWasEnabled = _gameplayCamera.enabled;
                 _cameraRig = gameObject.AddComponent<SagaCaptureRig>();
                 _cameraRig.Initialize(_gameplayCamera);
-                _gameplayCamera.enabled = false;
-                _cameraRig.BeginPreview();
-                _interface.Hide();
+                _cameraRig.BeginWarmup(
+                    Math.Max(2, Screen.width & ~1),
+                    Math.Max(2, Screen.height & ~1), 1);
+                _previewWarmupRoutine =
+                    StartCoroutine(WarmupThenShowPreview());
             }
             catch (Exception exception)
             {
                 SagaCapturePlugin.Log.LogError(exception);
                 Notify($"Saga Capture failed: {exception.Message}");
-                StopPreview();
+                CompleteStopPreview();
             }
+        }
+
+        // Keeps gameplay visible until the preview camera has stabilized.
+        private IEnumerator WarmupThenShowPreview()
+        {
+            float startedAt = Time.realtimeSinceStartup;
+            int renderedFrames = 0;
+            while (renderedFrames < MinimumWarmupFrames ||
+                   Time.realtimeSinceStartup - startedAt < MinimumWarmupSeconds)
+            {
+                renderedFrames++;
+                yield return new WaitForEndOfFrame();
+            }
+
+            _previewWarmupRoutine = null;
+            _gameplayCamera.enabled = false;
+            _cameraRig.BeginPreview();
+            _interface.Hide();
         }
 
         // Ensures the player camera exists before creating its clone.
@@ -69,8 +113,32 @@ namespace Landoria.SagaCapture
         }
 
         // Restores the original gameplay camera and listener.
-        private void StopPreview()
+        private void RequestStopPreview()
         {
+            if (_returning)
+            {
+                return;
+            }
+            if (_previewWarmupRoutine != null || _cameraRig?.Camera == null)
+            {
+                CompleteStopPreview();
+                return;
+            }
+
+            _cameraRig.PauseFlight();
+            _returnTransition.Start(
+                _cameraRig.Camera, Player.m_localPlayer);
+            _returning = true;
+        }
+
+        // Restores gameplay and the interface after the return completes.
+        private void CompleteStopPreview()
+        {
+            if (_previewWarmupRoutine != null)
+            {
+                StopCoroutine(_previewWarmupRoutine);
+                _previewWarmupRoutine = null;
+            }
             if (_cameraRig != null)
             {
                 _cameraRig.Dispose();
@@ -82,6 +150,7 @@ namespace Landoria.SagaCapture
                 _gameplayCamera.enabled = _gameplayCameraWasEnabled;
                 _gameplayCamera = null;
             }
+            _returning = false;
             _interface.Restore();
         }
 
@@ -90,7 +159,7 @@ namespace Landoria.SagaCapture
         {
             if (IsActive)
             {
-                StopPreview();
+                CompleteStopPreview();
             }
         }
 

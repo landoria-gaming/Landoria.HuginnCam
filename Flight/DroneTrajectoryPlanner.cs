@@ -10,15 +10,27 @@ namespace Landoria.SagaCapture
         private const float LookAheadSeconds = 2f;
         internal const float CameraRadius = 0.75f;
         private const float CharacterRetreatDistance = 2f;
+        private const float TerrainRiseSmoothTime = 0.35f;
+        private const float TerrainFallSmoothTime = 1.5f;
         private const int TerrainSamples = 8;
-        private static readonly float[] SideOffsets = { -1f, 1f, -2f, 2f };
+        private static readonly Vector2[] RouteOffsets =
+        {
+            new Vector2(-1f, 0f), new Vector2(1f, 0f),
+            new Vector2(-1f, 1f), new Vector2(1f, 1f),
+            new Vector2(-2f, 1f), new Vector2(2f, 1f),
+            new Vector2(-1f, 2f), new Vector2(1f, 2f),
+            new Vector2(0f, 1f), new Vector2(0f, 2f)
+        };
         private Vector3 _plannedTarget;
         private float _nextRefreshTime;
+        private float _lastRefreshTime;
+        private float _smoothedTerrainLift;
+        private float _terrainLiftVelocity;
         private bool _initialized;
 
         // Reuses one plan for 100 ms before simulating routes again.
         internal Vector3 Plan(
-            Vector3 origin, Vector3 desired, float speed,
+            Vector3 origin, Vector3 desired, Vector3 probeTarget, float speed,
             float terrainClearance)
         {
             if (_initialized && Time.time < _nextRefreshTime)
@@ -28,10 +40,22 @@ namespace Landoria.SagaCapture
 
             float lookAhead = Mathf.Max(
                 MinimumLookAhead, speed * LookAheadSeconds);
-            Vector3 target = RaiseForTerrain(
-                origin, desired, lookAhead, terrainClearance);
+            float requiredLift = GetRequiredTerrainLift(
+                origin, probeTarget, lookAhead, terrainClearance);
+            float smoothTime = requiredLift > _smoothedTerrainLift
+                ? TerrainRiseSmoothTime
+                : TerrainFallSmoothTime;
+            float elapsed = _initialized
+                ? Mathf.Max(0.001f, Time.time - _lastRefreshTime)
+                : RefreshInterval;
+            _smoothedTerrainLift = Mathf.SmoothDamp(
+                _smoothedTerrainLift, requiredLift,
+                ref _terrainLiftVelocity, smoothTime,
+                Mathf.Infinity, elapsed);
+            Vector3 target = desired + Vector3.up * _smoothedTerrainLift;
             _plannedTarget = ChooseObstacleRoute(
-                origin, target, lookAhead, terrainClearance);
+                origin, target, probeTarget, lookAhead, terrainClearance);
+            _lastRefreshTime = Time.time;
             _nextRefreshTime = Time.time + RefreshInterval;
             _initialized = true;
             return _plannedTarget;
@@ -39,10 +63,11 @@ namespace Landoria.SagaCapture
 
         // Chooses the first clear lateral route or keeps the direct route.
         private static Vector3 ChooseObstacleRoute(
-            Vector3 origin, Vector3 target, float lookAhead,
+            Vector3 origin, Vector3 target, Vector3 probeTarget,
+            float lookAhead,
             float terrainClearance)
         {
-            if (!HasObstacle(origin, target, lookAhead))
+            if (!HasObstacle(origin, probeTarget, lookAhead))
             {
                 return target;
             }
@@ -55,9 +80,10 @@ namespace Landoria.SagaCapture
             }
 
             Vector3 right = Vector3.Cross(Vector3.up, direction.normalized);
-            foreach (float offset in SideOffsets)
+            foreach (Vector2 offset in RouteOffsets)
             {
-                Vector3 candidate = target + right * offset;
+                Vector3 candidate = target + right * offset.x +
+                                    Vector3.up * offset.y;
                 candidate = RaiseForTerrain(
                     origin, candidate, lookAhead, terrainClearance);
                 if (!HasObstacle(origin, candidate, lookAhead))
@@ -66,7 +92,7 @@ namespace Landoria.SagaCapture
                 }
             }
 
-            if (HasCharacterObstacle(origin, target, lookAhead))
+            if (HasCharacterObstacle(origin, probeTarget, lookAhead))
             {
                 Vector3 retreat = origin - direction.normalized *
                                   CharacterRetreatDistance;
@@ -140,11 +166,21 @@ namespace Landoria.SagaCapture
             Vector3 origin, Vector3 target, float lookAhead,
             float terrainClearance)
         {
+            target.y += GetRequiredTerrainLift(
+                origin, target, lookAhead, terrainClearance);
+            return target;
+        }
+
+        // Returns the lift required by all sampled future terrain points.
+        private static float GetRequiredTerrainLift(
+            Vector3 origin, Vector3 target, float lookAhead,
+            float terrainClearance)
+        {
             Vector3 route = target - origin;
             float distance = Mathf.Min(route.magnitude, lookAhead);
             if (distance < 0.001f)
             {
-                return target;
+                return 0f;
             }
 
             float requiredLift = 0f;
@@ -159,8 +195,7 @@ namespace Landoria.SagaCapture
                 }
             }
 
-            target.y += Mathf.Max(0f, requiredLift);
-            return target;
+            return Mathf.Max(0f, requiredLift);
         }
 
         // Reads the heightmap elevation below one point.

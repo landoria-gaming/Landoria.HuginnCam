@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Landoria.SagaCapture
 {
-    // Logs the recorder camera's player-relative position once per second.
+    // Logs the recorder camera's player-relative position twice per second.
     internal sealed class SagaCapturePositionLogger
     {
         private float _nextLogTime;
@@ -15,7 +15,7 @@ namespace Landoria.SagaCapture
                 return;
             }
 
-            _nextLogTime = Time.time + 1f;
+            _nextLogTime = Time.time + 0.5f;
             Vector3 relative = cameraPosition - player.transform.position;
             float horizontalDistance = new Vector2(
                 relative.x, relative.z).magnitude;

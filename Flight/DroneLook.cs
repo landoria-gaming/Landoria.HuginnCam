@@ -11,12 +11,11 @@ namespace Landoria.SagaCapture
         private float _yawVelocity;
         private float _pitchVelocity;
 
-        // Snaps the initial view to the player without applying roll.
-        internal void Initialize(Transform cameraTransform, Vector3 focus)
+        // Preserves the copied view and resets smooth rotation state.
+        internal void Initialize()
         {
-            Vector3 angles = GetLevelAngles(cameraTransform.position, focus);
-            cameraTransform.rotation = Quaternion.Euler(
-                ClampPitch(angles.x), angles.y, 0f);
+            _yawVelocity = 0f;
+            _pitchVelocity = 0f;
         }
 
         // Smooths pitch and yaw while keeping the horizon level.

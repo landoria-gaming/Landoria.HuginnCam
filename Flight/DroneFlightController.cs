@@ -18,15 +18,19 @@ namespace Landoria.SagaCapture
         private const float CloseOrbitMaximumHeight = 2f;
         private const float CloseOrbitHeightBlendDistance = 1f;
         private const float OrbitRadiusPeriod = 30f;
+        private const float OrbitRadiusChangeSpeed = 0.1f;
         private const float FrontOrbitSpeedMultiplier = 0.5f;
         private const float RearOrbitSpeedMultiplier = 1.5f;
+        private const float OrbitAnticipationSeconds = 2f;
         private DroneFlightMode _mode;
         private Vector3 _travelDirection = Vector3.forward;
         private float _orbitAngle;
+        private float _orbitRadius;
         private float _orbitDirection = 1f;
         private bool _initialized;
 
         internal DroneFlightMode Mode => _mode;
+        internal Vector3 TrajectoryProbeTarget { get; private set; }
 
         // Returns mode-safe clearance with extra margin as orbit speed rises.
         internal float GetTerrainClearance(float speed)
@@ -58,13 +62,15 @@ namespace Landoria.SagaCapture
             if (_mode == DroneFlightMode.TrailingFlight)
             {
                 targetSpeed = GetTrailingSpeed(player, dronePosition);
-                return GetTrailingTarget(
+                Vector3 target = GetTrailingTarget(
                     playerPosition, environment,
                     GetTerrainClearance(targetSpeed));
+                TrajectoryProbeTarget = target;
+                return target;
             }
 
             targetSpeed = OrbitSpeed;
-            return GetOrbitTarget(playerPosition, environment);
+            return GetOrbitTarget(player, playerPosition, environment);
         }
 
         // Chooses a stable mode with distance hysteresis.
@@ -139,6 +145,7 @@ namespace Landoria.SagaCapture
         {
             Vector3 radial = Flatten(dronePosition - playerPosition);
             _orbitAngle = Mathf.Atan2(radial.z, radial.x);
+            _orbitRadius = Mathf.Max(1f, radial.magnitude);
         }
 
         // Updates the horizontal direction from meaningful player velocity.
@@ -179,13 +186,20 @@ namespace Landoria.SagaCapture
 
         // Advances a slowly changing circular orbit around the player.
         private Vector3 GetOrbitTarget(
-            Vector3 playerPosition, DroneEnvironment environment)
+            Player player, Vector3 playerPosition,
+            DroneEnvironment environment)
         {
             float radiusPhase = 0.5f +
                                 Mathf.Sin(Time.time * Mathf.PI * 2f /
                                           OrbitRadiusPeriod) * 0.5f;
-            float radius = Mathf.Lerp(
+            float desiredRadius = Mathf.Lerp(
                 1f, environment.MaximumOrbitRadius, radiusPhase);
+            _orbitRadius = Mathf.Clamp(
+                _orbitRadius, 1f, environment.MaximumOrbitRadius);
+            _orbitRadius = Mathf.MoveTowards(
+                _orbitRadius, desiredRadius,
+                OrbitRadiusChangeSpeed * Time.deltaTime);
+            float radius = _orbitRadius;
             Vector3 radial = new Vector3(
                 Mathf.Cos(_orbitAngle), 0f, Mathf.Sin(_orbitAngle));
             float frontAmount = Vector3.Dot(radial, _travelDirection) *
@@ -197,7 +211,6 @@ namespace Landoria.SagaCapture
                            orbitSpeedMultiplier /
                            Mathf.Max(radius, 1f) * Time.deltaTime;
             Vector3 target = playerPosition + radial * radius;
-            float heightPhase = 0.5f + Mathf.Sin(Time.time * 0.13f) * 0.5f;
             float closeBlend = Mathf.SmoothStep(
                 0f, 1f,
                 Mathf.InverseLerp(
@@ -207,8 +220,18 @@ namespace Landoria.SagaCapture
             float maximumHeight = Mathf.Lerp(
                 Mathf.Min(CloseOrbitMaximumHeight, environment.MaximumHeight),
                 environment.MaximumHeight, closeBlend);
-            target.y = GroundHeight(target) + Mathf.Lerp(
-                MinimumOrbitHeight, maximumHeight, heightPhase);
+            float ground = GroundHeight(target);
+            float preferredHeight = player.m_eye != null
+                ? player.m_eye.position.y
+                : playerPosition.y + 1.6f;
+            target.y = Mathf.Clamp(
+                preferredHeight,
+                ground + MinimumOrbitHeight,
+                ground + maximumHeight);
+            Vector3 tangent = new Vector3(-radial.z, 0f, radial.x) *
+                              _orbitDirection;
+            TrajectoryProbeTarget = target + tangent * OrbitSpeed *
+                                    OrbitAnticipationSeconds;
             return target;
         }
 

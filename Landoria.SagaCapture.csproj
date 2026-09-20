@@ -52,12 +52,14 @@
     <Compile Include="Infrastructure\SagaCapturePlugin.cs" />
     <Compile Include="Infrastructure\SagaCapturePositionLogger.cs" />
     <Compile Include="Camera\SagaCaptureAudioListener.cs" />
+    <Compile Include="Camera\SagaCaptureCameraLogger.cs" />
     <Compile Include="Camera\SagaCaptureController.cs" />
     <Compile Include="Camera\SagaCaptureEffectMirror.cs" />
     <Compile Include="Camera\SagaCaptureEffects.cs" />
     <Compile Include="Camera\SagaCaptureInterfaceController.cs" />
     <Compile Include="Camera\SagaCaptureMainCamera.cs" />
     <Compile Include="Camera\SagaCaptureRig.cs" />
+    <Compile Include="Camera\SagaCaptureReturnTransition.cs" />
     <Compile Include="Flight\DroneEnvironment.cs" />
     <Compile Include="Flight\DroneFraming.cs" />
     <Compile Include="Flight\DroneFlightController.cs" />

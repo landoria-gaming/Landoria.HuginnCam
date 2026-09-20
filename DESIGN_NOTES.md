@@ -3,6 +3,9 @@
 ## Camera identity
 
 - The camera is a drone.
+- Its field of view is configured through `SagaCameraFOV`.
+- The default field of view is 65 degrees and its accepted range is 40 to
+  120 degrees.
 - It should move and behave like a drone.
 - It can hover in place.
 - It is not a bird and should have no bird-related behavior or audio.
@@ -51,6 +54,8 @@ The drone has two main flight modes:
   to be defined.
 - When an obstacle is detected, it performs several lightweight trajectory
   simulations with small offsets to the left and right.
+- Those simulations include combined lateral and upward offsets, allowing the
+  drone to climb while moving left or right around a three-dimensional obstacle.
 - The player and other creatures count as obstacles for these simulations.
 - Character avoidance uses the camera's 0.75-meter radius. If every lateral route is
   blocked, the drone retreats instead of continuing through the character.
@@ -75,7 +80,7 @@ The zones define these flight limits:
 
 | Zone | Maximum height | Orbit radius |
 | --- | ---: | ---: |
-| `Forest` | 3 m | 1–3 m |
+| `Forest` | 4 m | 1–3 m |
 | `OpenArea` | 8 m | 1–8 m |
 
 ### Framing and horizon
@@ -102,6 +107,16 @@ The zones define these flight limits:
 - It always looks at the player.
 - It uses the same 100 ms terrain and obstacle anticipation policy as
   `TrailingFlight`.
+- Its obstacle probe follows a two-second tangent projection of the future
+  orbit instead of only checking the very short immediate-target segment.
+- Terrain altitude uses the maximum clearance required by eight future path
+  samples, then smooths that reference over time.
+- Terrain-driven climbs react faster than descents, while descents use a
+  longer smoothing interval to avoid vertical oscillation.
+- Vertical flight speed is explicitly limited to 0.4 meter per second.
+- Vertical motion uses a separate non-overshooting damped controller, so
+  downward momentum cannot carry the camera below its head-height target and
+  trigger a repeated correction cycle.
 - It switches to `TrailingFlight` when its horizontal distance from the
   player reaches 5 meters.
 - The transition from `OrbitFlight` to `TrailingFlight` is gradual and must
@@ -115,6 +130,12 @@ The zones define these flight limits:
 - The transition between both flight modes remains gradual.
 - Its horizontal orbit radius evolves gradually within the active environment
   zone limits.
+- It prefers the player's head altitude in world space.
+- That preferred altitude is clamped from the terrain directly below the
+  drone, so slopes still respect local clearance and maximum-height rules.
+- A new orbit starts from the drone's current radius, clamped to the active
+  zone, and changes radius by at most 0.1 meter per second so radial movement
+  does not hide the circular motion.
 - It stays at least 0.5 meters above the terrain.
 - Its 0.75-meter collision radius raises its effective center height to at
   least 0.75 meters above the terrain.
@@ -135,7 +156,12 @@ The zones define these flight limits:
 - `F8` enters or leaves `CaptureMode`, which records video.
 - `Shift+F8` enters or leaves `PreviewMode`, which displays the drone camera
   without recording.
+- PreviewMode warms its camera for at least 0.5 seconds and 8 rendered frames
+  while the gameplay camera remains visible, preventing a flash on transition.
 - `Escape` leaves `PreviewMode` without opening Valheim's menu.
+- Leaving PreviewMode uses FreeFly's three-second eased return: it first looks
+  toward the player, then aligns with the gameplay camera.
+- The interface remains hidden until that return transition is complete.
 - `Escape` does not stop `CaptureMode`; it retains its normal Valheim behavior.
 - The shortcuts must remain configurable through BepInEx.
 
@@ -152,6 +178,8 @@ The zones define these flight limits:
 - Keep it synchronized with the gameplay camera throughout recording warmup.
 - Copy the gameplay camera pose once more immediately before flight begins.
 - Begin autonomous flight only after warmup completes and recording starts.
+- Preserve the copied camera inclination when flight begins, then rotate
+  smoothly toward normal drone framing.
 - Keep video recording through UnityRuntimeCameraRecorder.
 - Save videos in the user's Windows `My Videos` directory.
 - Use medium recording quality by default.

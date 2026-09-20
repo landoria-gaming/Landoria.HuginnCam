@@ -10,7 +10,7 @@ namespace Landoria.SagaCapture
         private float _nextRefreshTime;
 
         internal bool IsForest { get; private set; }
-        internal float MaximumHeight => IsForest ? 3f : 8f;
+        internal float MaximumHeight => IsForest ? 4f : 8f;
         internal float MaximumOrbitRadius => IsForest ? 3f : 8f;
 
         // Refreshes the zone after a short stable interval.
