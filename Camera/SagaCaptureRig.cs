@@ -151,7 +151,8 @@ namespace Landoria.SagaCapture
                     DroneTrajectoryPlanner.CameraRadius);
             desired = _trajectory.Plan(
                 position, desired, probeTarget,
-                _motion.Speed, terrainClearance);
+                _motion.Speed, terrainClearance,
+                _flight.Mode != DroneFlightMode.OrbitFlight);
             Vector3 next = _motion.Step(position, desired, targetSpeed);
             _camera.transform.position = KeepAboveTerrain(
                 next, terrainClearance);

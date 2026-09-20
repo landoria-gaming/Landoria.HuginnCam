@@ -54,10 +54,15 @@ The drone has two main flight modes:
   to be defined.
 - When an obstacle is detected, it performs several lightweight trajectory
   simulations with small offsets to the left and right.
+- Once it chooses left or right for one collider, it retains that side until
+  the obstacle has remained clear for two seconds.
 - Those simulations include combined lateral and upward offsets, allowing the
   drone to climb while moving left or right around a three-dimensional obstacle.
 - The player and other creatures count as obstacles for these simulations.
-- Character avoidance uses the camera's 0.75-meter radius. If every lateral route is
+- Grass, ferns, heath, berry plants, and bushes are ignored because the camera
+  may fly through light vegetation.
+- Dropped and pickable items, such as branches and small stones, are ignored.
+- Character avoidance uses the camera's 0.4-meter radius. If every lateral route is
   blocked, the drone retreats instead of continuing through the character.
 - It chooses a lateral trajectory only when that trajectory avoids the first
   detected obstacle.
@@ -80,8 +85,8 @@ The zones define these flight limits:
 
 | Zone | Maximum height | Orbit radius |
 | --- | ---: | ---: |
-| `Forest` | 4 m | 1–3 m |
-| `OpenArea` | 8 m | 1–8 m |
+| `Forest` | 4 m | 2–3 m |
+| `OpenArea` | 8 m | 2–8 m |
 
 ### Framing and horizon
 
@@ -109,6 +114,21 @@ The zones define these flight limits:
   `TrailingFlight`.
 - Its obstacle probe follows a two-second tangent projection of the future
   orbit instead of only checking the very short immediate-target segment.
+- At orbit entry, the drone samples 36 points around the complete circle
+  and fits a terrain plane before moving around the player.
+- It simulates nine complete candidate ellipses across the allowed radius
+  range with the camera's 0.4-meter volume.
+- It selects a fully clear ellipse when possible, otherwise the candidate
+  containing the fewest blocked segments.
+- OrbitFlight disables reactive collider avoidance while following its
+  preplanned ellipse, preventing local corrections from fighting the route.
+- TrailingFlight retains reactive collider avoidance because it has no
+  complete preplanned route.
+- Dynamic terrain clearance remains active in both flight modes.
+- The circular path follows that inclined plane, producing a smooth tilted
+  ellipse in three dimensions whose high side matches the rising terrain.
+- Local terrain checks remain active for relief not represented by the fitted
+  plane.
 - Terrain altitude uses the maximum clearance required by eight future path
   samples, then smooths that reference over time.
 - Terrain-driven climbs react faster than descents, while descents use a
@@ -117,6 +137,9 @@ The zones define these flight limits:
 - Vertical motion uses a separate non-overshooting damped controller, so
   downward momentum cannot carry the camera below its head-height target and
   trigger a repeated correction cycle.
+- Horizontal target speed decreases over the final one second of approach so
+  the drone brakes before crossing its target radius and oscillating inward
+  and outward.
 - It switches to `TrailingFlight` when its horizontal distance from the
   player reaches 5 meters.
 - The transition from `OrbitFlight` to `TrailingFlight` is gradual and must
@@ -128,17 +151,17 @@ The zones define these flight limits:
 - The drone returns to `OrbitFlight` only after it is within 4 meters and can
   remain nearby at orbit speed.
 - The transition between both flight modes remains gradual.
-- Its horizontal orbit radius evolves gradually within the active environment
-  zone limits.
+- Its horizontal orbit radius is selected from the current camera radius and
+  clamped to the active environment zone when an orbit begins.
 - It prefers the player's head altitude in world space.
 - That preferred altitude is clamped from the terrain directly below the
   drone, so slopes still respect local clearance and maximum-height rules.
-- A new orbit starts from the drone's current radius, clamped to the active
-  zone, and changes radius by at most 0.1 meter per second so radial movement
-  does not hide the circular motion.
+- A new orbit keeps that radius for the complete session so radial changes do
+  not distort the planned path.
+- The minimum orbit radius is 2 meters so the 0.4-meter camera volume never
+  targets a position overlapping the player and fighting character avoidance.
 - It stays at least 0.5 meters above the terrain.
-- Its 0.75-meter collision radius raises its effective center height to at
-  least 0.75 meters above the terrain.
+- Its 0.4-meter collision radius is included in terrain-clearance checks.
 - Its terrain clearance increases smoothly from 0.5 to 2 meters as its speed
   rises, reaching the full clearance at 3 meters per second.
 - When it is less than 3 meters horizontally from the player, it stays no

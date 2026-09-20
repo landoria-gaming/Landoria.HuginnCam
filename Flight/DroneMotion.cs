@@ -9,6 +9,7 @@ namespace Landoria.SagaCapture
         private const float MaximumJerk = 1.5f;
         private const float MaximumVerticalSpeed = 0.4f;
         private const float VerticalSmoothTime = 1.25f;
+        private const float HorizontalArrivalTime = 1f;
         private Vector3 _velocity;
         private Vector3 _acceleration;
         private float _verticalVelocity;
@@ -33,8 +34,10 @@ namespace Landoria.SagaCapture
             float deltaTime = Mathf.Max(Time.deltaTime, 0.0001f);
             Vector3 offset = destination - position;
             offset.y = 0f;
+            float arrivalSpeed = offset.magnitude / HorizontalArrivalTime;
+            float desiredSpeed = Mathf.Min(targetSpeed, arrivalSpeed);
             Vector3 desiredVelocity = offset.sqrMagnitude > 0.0001f
-                ? offset.normalized * targetSpeed
+                ? offset.normalized * desiredSpeed
                 : Vector3.zero;
             Vector3 desiredAcceleration = Vector3.ClampMagnitude(
                 (desiredVelocity - _velocity) / deltaTime,

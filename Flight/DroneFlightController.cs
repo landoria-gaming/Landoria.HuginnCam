@@ -6,6 +6,7 @@ namespace Landoria.SagaCapture
     internal sealed class DroneFlightController
     {
         private const float OrbitSpeed = 0.5f;
+        private const float MinimumOrbitRadius = 2f;
         private const float TrailingEntryDistance = 5f;
         private const float OrbitReturnDistance = 4f;
         private const float MinimumTrailingDistance = 1f;
@@ -17,15 +18,18 @@ namespace Landoria.SagaCapture
         private const float CloseOrbitDistance = 3f;
         private const float CloseOrbitMaximumHeight = 2f;
         private const float CloseOrbitHeightBlendDistance = 1f;
-        private const float OrbitRadiusPeriod = 30f;
-        private const float OrbitRadiusChangeSpeed = 0.1f;
         private const float FrontOrbitSpeedMultiplier = 0.5f;
         private const float RearOrbitSpeedMultiplier = 1.5f;
         private const float OrbitAnticipationSeconds = 2f;
+        private const int OrbitTerrainSamples = 36;
+        private const int OrbitRadiusCandidates = 9;
         private DroneFlightMode _mode;
         private Vector3 _travelDirection = Vector3.forward;
         private float _orbitAngle;
         private float _orbitRadius;
+        private float _orbitSlopeX;
+        private float _orbitSlopeZ;
+        private bool _orbitPlaneInitialized;
         private float _orbitDirection = 1f;
         private bool _initialized;
 
@@ -145,7 +149,8 @@ namespace Landoria.SagaCapture
         {
             Vector3 radial = Flatten(dronePosition - playerPosition);
             _orbitAngle = Mathf.Atan2(radial.z, radial.x);
-            _orbitRadius = Mathf.Max(1f, radial.magnitude);
+            _orbitRadius = Mathf.Max(MinimumOrbitRadius, radial.magnitude);
+            _orbitPlaneInitialized = false;
         }
 
         // Updates the horizontal direction from meaningful player velocity.
@@ -189,17 +194,15 @@ namespace Landoria.SagaCapture
             Player player, Vector3 playerPosition,
             DroneEnvironment environment)
         {
-            float radiusPhase = 0.5f +
-                                Mathf.Sin(Time.time * Mathf.PI * 2f /
-                                          OrbitRadiusPeriod) * 0.5f;
-            float desiredRadius = Mathf.Lerp(
-                1f, environment.MaximumOrbitRadius, radiusPhase);
             _orbitRadius = Mathf.Clamp(
-                _orbitRadius, 1f, environment.MaximumOrbitRadius);
-            _orbitRadius = Mathf.MoveTowards(
-                _orbitRadius, desiredRadius,
-                OrbitRadiusChangeSpeed * Time.deltaTime);
+                _orbitRadius, MinimumOrbitRadius,
+                environment.MaximumOrbitRadius);
             float radius = _orbitRadius;
+            if (!_orbitPlaneInitialized)
+            {
+                InitializeOrbitPlan(player, playerPosition, environment);
+                radius = _orbitRadius;
+            }
             Vector3 radial = new Vector3(
                 Mathf.Cos(_orbitAngle), 0f, Mathf.Sin(_orbitAngle));
             float frontAmount = Vector3.Dot(radial, _travelDirection) *
@@ -224,6 +227,8 @@ namespace Landoria.SagaCapture
             float preferredHeight = player.m_eye != null
                 ? player.m_eye.position.y
                 : playerPosition.y + 1.6f;
+            preferredHeight += _orbitSlopeX * (target.x - playerPosition.x) +
+                               _orbitSlopeZ * (target.z - playerPosition.z);
             target.y = Mathf.Clamp(
                 preferredHeight,
                 ground + MinimumOrbitHeight,
@@ -233,6 +238,116 @@ namespace Landoria.SagaCapture
             TrajectoryProbeTarget = target + tangent * OrbitSpeed *
                                     OrbitAnticipationSeconds;
             return target;
+        }
+
+        // Selects the clearest complete ellipse before an orbit begins.
+        private void InitializeOrbitPlan(
+            Player player, Vector3 playerPosition,
+            DroneEnvironment environment)
+        {
+            float preferredRadius = Mathf.Clamp(
+                _orbitRadius, MinimumOrbitRadius,
+                environment.MaximumOrbitRadius);
+            float headHeight = player.m_eye != null
+                ? player.m_eye.position.y
+                : playerPosition.y + 1.6f;
+            int bestObstacles = int.MaxValue;
+            float bestDistance = float.MaxValue;
+            for (int index = 0; index < OrbitRadiusCandidates; index++)
+            {
+                float amount = index / (OrbitRadiusCandidates - 1f);
+                float radius = Mathf.Lerp(
+                    MinimumOrbitRadius,
+                    environment.MaximumOrbitRadius, amount);
+                Vector2 slope = FitOrbitPlane(playerPosition, radius);
+                int obstacles = CountOrbitObstacles(
+                    playerPosition, headHeight, radius, slope);
+                float distance = Mathf.Abs(radius - preferredRadius);
+                if (obstacles < bestObstacles ||
+                    obstacles == bestObstacles && distance < bestDistance)
+                {
+                    bestObstacles = obstacles;
+                    bestDistance = distance;
+                    _orbitRadius = radius;
+                    _orbitSlopeX = slope.x;
+                    _orbitSlopeZ = slope.y;
+                }
+            }
+
+            _orbitPlaneInitialized = true;
+            LogOrbitPlane(bestObstacles);
+        }
+
+        // Fits one terrain plane from a complete candidate orbit.
+        private static Vector2 FitOrbitPlane(
+            Vector3 playerPosition, float radius)
+        {
+            float sumXHeight = 0f;
+            float sumZHeight = 0f;
+            float sumSquared = 0f;
+            for (int index = 0; index < OrbitTerrainSamples; index++)
+            {
+                float angle = Mathf.PI * 2f * index / OrbitTerrainSamples;
+                float x = Mathf.Cos(angle) * radius;
+                float z = Mathf.Sin(angle) * radius;
+                float height = GroundHeight(
+                    playerPosition + new Vector3(x, 0f, z));
+                sumXHeight += x * height;
+                sumZHeight += z * height;
+                sumSquared += x * x;
+            }
+
+            return sumSquared > 0.001f
+                ? new Vector2(
+                    sumXHeight / sumSquared,
+                    sumZHeight / sumSquared)
+                : Vector2.zero;
+        }
+
+        // Counts blocked segments over one complete candidate ellipse.
+        private static int CountOrbitObstacles(
+            Vector3 center, float headHeight, float radius, Vector2 slope)
+        {
+            int obstacles = 0;
+            Vector3 previous = GetPlannedOrbitPoint(
+                center, headHeight, radius, slope,
+                OrbitTerrainSamples - 1);
+            for (int index = 0; index < OrbitTerrainSamples; index++)
+            {
+                Vector3 point = GetPlannedOrbitPoint(
+                    center, headHeight, radius, slope, index);
+                if (DroneTrajectoryPlanner.IsRouteBlocked(previous, point))
+                {
+                    obstacles++;
+                }
+                previous = point;
+            }
+            return obstacles;
+        }
+
+        // Creates one point on a terrain-inclined candidate ellipse.
+        private static Vector3 GetPlannedOrbitPoint(
+            Vector3 center, float headHeight, float radius,
+            Vector2 slope, int index)
+        {
+            float angle = Mathf.PI * 2f * index / OrbitTerrainSamples;
+            float x = Mathf.Cos(angle) * radius;
+            float z = Mathf.Sin(angle) * radius;
+            return new Vector3(
+                center.x + x, headHeight + slope.x * x + slope.y * z,
+                center.z + z);
+        }
+
+        // Logs the planned ellipse incline for trajectory diagnostics.
+        private void LogOrbitPlane(int obstacleCount)
+        {
+            float slope = Mathf.Sqrt(
+                _orbitSlopeX * _orbitSlopeX + _orbitSlopeZ * _orbitSlopeZ);
+            float angle = Mathf.Atan(slope) * Mathf.Rad2Deg;
+            SagaCapturePlugin.Log.LogInfo(
+                $"Orbit ellipse planned: incline={angle:F1} degrees, " +
+                $"radius={_orbitRadius:F2}m, obstacles={obstacleCount}, " +
+                $"slope=({_orbitSlopeX:F3}, {_orbitSlopeZ:F3}).");
         }
 
         // Scales catch-up speed with trailing error up to the sprint limit.
