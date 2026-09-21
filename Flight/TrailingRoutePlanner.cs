@@ -9,6 +9,7 @@ namespace Landoria.SagaCapture
         private const float MinimumHorizon = 0.8f;
         private const float MaximumHorizon = 2.5f;
         private const float WaypointProgress = 0.4f;
+        private const float MinimumPredictedBehindDistance = 3.5f;
         private const int RouteSamples = 8;
         private static readonly float[] LateralOffsets =
         {
@@ -18,22 +19,24 @@ namespace Landoria.SagaCapture
         private float _nextRefreshTime;
         private float _preferredSide;
         private bool _initialized;
+        private bool _directRoute;
 
         // Returns a stable near-term waypoint on the clearest predicted route.
         internal Vector3 Plan(
             Vector3 origin, Vector3 desired, Vector3 droneVelocity,
-            Vector3 playerVelocity)
+            Vector3 playerPosition, Vector3 playerVelocity)
         {
-            if (_initialized && Time.time < _nextRefreshTime)
-            {
-                return _waypoint;
-            }
-
             float speed = Mathf.Max(
                 droneVelocity.magnitude, playerVelocity.magnitude);
             float horizon = Mathf.Clamp(
                 0.8f + speed * 0.25f, MinimumHorizon, MaximumHorizon);
             Vector3 endpoint = desired + Flatten(playerVelocity) * horizon;
+            endpoint = KeepBehindPlayer(
+                endpoint, playerPosition, playerVelocity);
+            if (_initialized && Time.time < _nextRefreshTime)
+            {
+                return _directRoute ? endpoint : _waypoint;
+            }
             Vector3 tangent = GetInitialTangent(
                 origin, endpoint, droneVelocity, horizon);
             _waypoint = SelectRoute(origin, endpoint, tangent);
@@ -42,10 +45,32 @@ namespace Landoria.SagaCapture
             return _waypoint;
         }
 
+        // Prevents prediction from putting the trailing target ahead.
+        private static Vector3 KeepBehindPlayer(
+            Vector3 endpoint, Vector3 playerPosition,
+            Vector3 playerVelocity)
+        {
+            Vector3 travel = Flatten(playerVelocity);
+            if (travel.sqrMagnitude < 0.04f)
+            {
+                return endpoint;
+            }
+            Vector3 direction = travel.normalized;
+            float behind = Vector3.Dot(
+                Flatten(playerPosition - endpoint), direction);
+            if (behind < MinimumPredictedBehindDistance)
+            {
+                endpoint -= direction *
+                    (MinimumPredictedBehindDistance - behind);
+            }
+            return endpoint;
+        }
+
         internal void Reset()
         {
             _initialized = false;
             _preferredSide = 0f;
+            _directRoute = false;
         }
 
         // Preserves current momentum while still bending toward the player.
@@ -76,8 +101,10 @@ namespace Landoria.SagaCapture
                     if (Mathf.Abs(offset) < 0.01f)
                     {
                         _preferredSide = 0f;
+                        _directRoute = true;
                         return endpoint;
                     }
+                    _directRoute = false;
                     if (Mathf.Abs(offset) > 0.01f)
                     {
                         _preferredSide = Mathf.Sign(offset);
@@ -86,6 +113,7 @@ namespace Landoria.SagaCapture
                 }
             }
 
+            _directRoute = false;
             return endpoint;
         }
 

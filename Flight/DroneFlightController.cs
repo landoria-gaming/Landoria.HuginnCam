@@ -26,10 +26,11 @@ namespace Landoria.SagaCapture
         // Predicts the trailing route without involving the orbit controller.
         internal Vector3 PlanTrailingRoute(
             Vector3 origin, Vector3 target, Vector3 droneVelocity,
-            Vector3 playerVelocity)
+            Vector3 playerPosition, Vector3 playerVelocity)
         {
             return _trailing.PlanRoute(
-                origin, target, droneVelocity, playerVelocity);
+                origin, target, droneVelocity,
+                playerPosition, playerVelocity);
         }
 
         // Returns the active mode's terrain clearance at the current speed.

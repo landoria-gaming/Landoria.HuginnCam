@@ -5,10 +5,12 @@ namespace Landoria.SagaCapture
     // Moves the drone with bounded acceleration and gradual force changes.
     internal sealed class DroneMotion
     {
-        private const float MaximumAcceleration = 3f;
-        private const float MaximumJerk = 10f;
-        private const float EmergencyAcceleration = 8f;
-        private const float EmergencyJerk = 30f;
+        private const float MaximumAcceleration = 8f;
+        private const float MaximumJerk = 30f;
+        private const float EmergencyAcceleration = 14f;
+        private const float EmergencyJerk = 60f;
+        private const float VelocityResponseTime = 0.25f;
+        private const float EmergencyResponseTime = 0.1f;
         private const float CruiseVerticalSpeed = 0.4f;
         private const float CatchUpVerticalSpeed = 2.5f;
         private const float MaximumVerticalAcceleration = 1.5f;
@@ -92,8 +94,10 @@ namespace Landoria.SagaCapture
                 ? EmergencyAcceleration : MaximumAcceleration;
             float jerkLimit = emergencyAvoidance
                 ? EmergencyJerk : MaximumJerk;
+            float responseTime = emergencyAvoidance
+                ? EmergencyResponseTime : VelocityResponseTime;
             Vector3 desiredAcceleration = Vector3.ClampMagnitude(
-                (desiredVelocity - _velocity) / deltaTime,
+                (desiredVelocity - _velocity) / responseTime,
                 accelerationLimit);
             desiredAcceleration.y = 0f;
             _acceleration = Vector3.MoveTowards(

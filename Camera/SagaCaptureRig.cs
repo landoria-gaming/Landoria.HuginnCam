@@ -145,6 +145,7 @@ namespace Landoria.SagaCapture
             {
                 desired = _flight.PlanTrailingRoute(
                     position, desired, _motion.Velocity,
+                    player.transform.position,
                     player.GetVelocity());
                 probeTarget = desired;
             }

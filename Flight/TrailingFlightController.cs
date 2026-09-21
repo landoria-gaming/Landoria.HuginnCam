@@ -23,10 +23,11 @@ namespace Landoria.SagaCapture
         // Predicts a short trailing route around nearby obstacles.
         internal Vector3 PlanRoute(
             Vector3 origin, Vector3 target, Vector3 droneVelocity,
-            Vector3 playerVelocity)
+            Vector3 playerPosition, Vector3 playerVelocity)
         {
             return _route.Plan(
-                origin, target, droneVelocity, playerVelocity);
+                origin, target, droneVelocity,
+                playerPosition, playerVelocity);
         }
 
         // Clears any route state when trailing flight ends.
@@ -53,7 +54,7 @@ namespace Landoria.SagaCapture
                 terrainClearance, allowedHeight);
             float distance = Mathf.Lerp(
                 MinimumDistance, MaximumDistance,
-                0.25f + Mathf.Sin(Time.time * 0.17f) * 0.25f);
+                0.75f + Mathf.Sin(Time.time * 0.17f) * 0.25f);
             distance += HeightDistance(altitude);
             Vector3 right = Vector3.Cross(Vector3.up, direction);
             float lateral = Mathf.Sin(Time.time * 0.11f) * 0.75f;
