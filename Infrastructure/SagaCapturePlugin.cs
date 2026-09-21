@@ -21,6 +21,9 @@ namespace Landoria.SagaCapture
         internal static ManualLogSource Log { get; private set; }
         internal static bool IsPreviewModeActive =>
             _instance?._cameraController?.IsActive == true;
+        internal static bool IsDroneCameraActive =>
+            IsPreviewModeActive ||
+            _instance?._recordingController?.IsCameraActive == true;
 
         // Initializes the plugin logging.
         private void Awake()

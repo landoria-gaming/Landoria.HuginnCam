@@ -19,6 +19,7 @@ namespace Landoria.SagaCapture
         private string _outputPath;
 
         internal bool IsActive => _recorder != null || _warmupRoutine != null;
+        internal bool IsCameraActive => _cameraRig?.IsFlying == true;
 
         // Starts a recording when the recorder is idle.
         internal void StartRecording()

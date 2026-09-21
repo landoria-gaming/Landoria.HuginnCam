@@ -1,0 +1,31 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Keep Unity, BepInEx, and the native encoder external to the merged plugin. -->
+  <Target Name="MergeSagaCaptureDependencies" AfterTargets="Build">
+    <PropertyGroup>
+      <SagaMergedAssembly>$(IntermediateOutputPath)$(TargetName).merged$(TargetExt)</SagaMergedAssembly>
+      <DronePilotOutput>$(MSBuildProjectDirectory)\..\DronePilot\bin\$(Configuration)\net48</DronePilotOutput>
+    </PropertyGroup>
+    <ItemGroup>
+      <SagaAssembliesToMerge Include="$(IntermediateOutputPath)$(TargetFileName)" />
+      <SagaAssembliesToMerge Include="$(DronePilotOutput)\DronePilot.dll" />
+      <SagaAssembliesToMerge Include="$(DronePilotOutput)\YamlDotNet.dll" />
+      <SagaAssembliesToMerge Include="$(DronePilotOutput)\Newtonsoft.Json.dll" />
+      <SagaAssembliesToMerge Include="$(MSBuildProjectDirectory)\lib\UnityRuntimeCameraRecorder.dll" />
+      <SagaAssembliesToMerge Include="$(MSBuildProjectDirectory)\lib\FFmpegMediaWriter.dll" />
+    </ItemGroup>
+    <Error Condition="!Exists('%(SagaAssembliesToMerge.Identity)')"
+           Text="Missing assembly to merge: %(SagaAssembliesToMerge.Identity)" />
+    <ILRepack InputAssemblies="@(SagaAssembliesToMerge)"
+              OutputFile="$(SagaMergedAssembly)"
+              TargetKind="SameAsPrimaryAssembly"
+              LibraryPath="$(UnityManagedPath);$(BepInExPath)\core;$(DronePilotOutput);$(MSBuildProjectDirectory)\lib"
+              Internalize="true"
+              DebugInfo="true"
+              Parallel="true" />
+    <Copy SourceFiles="$(SagaMergedAssembly)" DestinationFiles="$(TargetPath)" />
+    <Copy SourceFiles="$(IntermediateOutputPath)$(TargetName).merged.pdb"
+          DestinationFiles="$(TargetDir)$(TargetName).pdb"
+          Condition="Exists('$(IntermediateOutputPath)$(TargetName).merged.pdb')" />
+    <Delete Files="$(TargetDir)DronePilot.dll;$(TargetDir)DronePilot.pdb;$(TargetDir)YamlDotNet.dll;$(TargetDir)Newtonsoft.Json.dll;$(TargetDir)UnityRuntimeCameraRecorder.dll;$(TargetDir)FFmpegMediaWriter.dll" />
+  </Target>
+</Project>

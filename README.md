@@ -27,12 +27,21 @@ settings control recording, pilot profiles, and separate Preview/Capture
 telemetry switches. Enabled telemetry writes one JSON array per interval under
 `BepInEx/config/SagaCapture/Sessions` by default.
 
-Initialize the DronePilot submodule before building:
+Create a local directory link at `mods/DronePilot` pointing to the DronePilot
+repository before building. On Windows, a directory junction works when
+symbolic-link privileges are unavailable. Then run:
 
 ```text
-git submodule update --init --recursive
 dotnet build Landoria.SagaCapture.csproj -c Release
 ```
+
+The build merges DronePilot, its YAML/JSON libraries, and the managed recorder
+libraries into `Landoria.SagaCapture.dll`. Unity and Valheim assemblies remain
+external; the native `Direct3DVideoEncoder.dll` stays beside the plugin.
+
+The visible drone is loaded from `assets/sagacapture-drone`. Its Unity build
+project lives in the sibling `../SagaCapture.ModelBuild` directory. Building
+that project copies the verified bundle into SagaCapture's `assets` directory.
 
 FFmpeg must be available through the `FFMPEG_PATH` environment variable, which
 must point to a directory containing `ffmpeg.exe`.

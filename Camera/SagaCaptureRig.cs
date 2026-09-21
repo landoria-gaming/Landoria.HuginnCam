@@ -15,11 +15,13 @@ namespace Landoria.SagaCapture
             new SagaCaptureMainCamera();
         private DronePilotController _pilot;
         private readonly SagaCaptureEffects _effects = new SagaCaptureEffects();
+        private SagaCaptureDroneVisual _visual;
         private bool _flightEnabled;
         private bool _debugSnapshots;
         private bool _synchronizeSourcePose = true;
 
         internal Camera Camera => _camera;
+        internal bool IsFlying => _flightEnabled;
 
         // Clones the gameplay camera and optionally transfers audio listening.
         internal void Initialize(Camera sourceCamera, bool transferAudio = true)
@@ -34,6 +36,9 @@ namespace Landoria.SagaCapture
             _camera.fieldOfView = Preference.SagaCameraFOV;
             _camera.depth = sourceCamera.depth + 1f;
             _camera.enabled = false;
+            GameObject visualObject = new GameObject("SagaCaptureDroneVisual");
+            _visual = visualObject.AddComponent<SagaCaptureDroneVisual>();
+            _visual.Initialize(_camera, sourceCamera);
             _effects.Initialize(sourceCamera, cameraObject);
             SynchronizePose();
             SagaCaptureCameraLogger.LogSnapshot(
@@ -70,14 +75,18 @@ namespace Landoria.SagaCapture
             _pilot = new DronePilotController(
                 _camera, player.gameObject, Preference.DroneConfigPath,
                 adapter.CreateWorld(), adapter.CreateProfiles(),
-                Vector3.up * 1.25f, Preference.CreateTelemetry(preview));
+                Vector3.up * 1.60f, Preference.CreateTelemetry(preview),
+                _visual.gameObject);
+            _visual.SetRadius(_pilot.CameraRadius);
             _flightEnabled = true;
+            _visual.SetFlightActive(!preview);
         }
 
         // Stops autonomous flight without snapping back to the source pose.
         internal void PauseFlight()
         {
             _flightEnabled = false;
+            _visual?.SetFlightActive(false);
             _synchronizeSourcePose = false;
             _pilot?.Dispose();
             _pilot = null;
@@ -109,6 +118,7 @@ namespace Landoria.SagaCapture
                 return;
             }
             _camera.fieldOfView = Preference.SagaCameraFOV;
+            _visual?.Refresh();
             if (!_flightEnabled)
             {
                 if (_synchronizeSourcePose)
@@ -119,6 +129,7 @@ namespace Landoria.SagaCapture
             }
 
             _pilot?.Update(player.GetVelocity(), player.m_runSpeed);
+            _visual?.SetRadius(_pilot.CameraRadius);
         }
 
         // Restores listeners and destroys the secondary camera.
@@ -126,6 +137,12 @@ namespace Landoria.SagaCapture
         {
             _pilot?.Dispose();
             _pilot = null;
+            _visual?.Dispose();
+            if (_visual != null)
+            {
+                Destroy(_visual.gameObject);
+            }
+            _visual = null;
             EndOffscreenRendering();
             _mainCamera.Restore(_camera);
             if (_originalListener != null)

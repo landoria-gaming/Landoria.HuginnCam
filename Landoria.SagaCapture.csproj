@@ -11,6 +11,7 @@
     <AssemblyName>Landoria.SagaCapture</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <UnityManagedPath>$(ValheimGamePath)\valheim_Data\Managed</UnityManagedPath>
+    <ILRepackTargetsFile>$(MSBuildProjectDirectory)\ILRepack.targets</ILRepackTargetsFile>
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
     <CameraRecorderAssetUrl>https://github.com/UnityRuntimeCameraRecorder/UnityRuntimeCameraRecorder/releases/download/1.0.0-snapshot/UnityRuntimeCameraRecorder-1.0.0-snapshot-windows-x64.zip</CameraRecorderAssetUrl>
     <CameraRecorderDownloadDirectory>$(MSBuildProjectDirectory)\obj\$(Configuration)\downloads</CameraRecorderDownloadDirectory>
@@ -38,19 +39,24 @@
     <Reference Include="UnityEngine.AudioModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.AssetBundleModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.AssetBundleModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UI"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="FFmpegMediaWriter"><HintPath>$(MSBuildProjectDirectory)\lib\FFmpegMediaWriter.dll</HintPath><Private>true</Private></Reference>
     <Reference Include="UnityRuntimeCameraRecorder"><HintPath>$(MSBuildProjectDirectory)\lib\UnityRuntimeCameraRecorder.dll</HintPath><Private>true</Private></Reference>
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.44" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="lib\Direct3DVideoEncoder.dll">
       <Link>Direct3DVideoEncoder.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="external\DronePilot\bin\$(Configuration)\net48\YamlDotNet.dll"><Link>YamlDotNet.dll</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
-    <Content Include="external\DronePilot\bin\$(Configuration)\net48\Newtonsoft.Json.dll"><Link>Newtonsoft.Json.dll</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+    <Content Include="assets\sagacapture-drone">
+      <Link>sagacapture-drone</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="external\DronePilot\DronePilot.csproj">
+    <ProjectReference Include="..\DronePilot\DronePilot.csproj">
       <Project>{8A80B99F-CA09-4E77-91EA-37267C259192}</Project>
       <Name>DronePilot</Name>
       <AdditionalProperties>UnityManagedPath=$(ValheimGamePath)\valheim_Data\Managed</AdditionalProperties>
@@ -63,6 +69,8 @@
     <Compile Include="Camera\SagaCaptureAudioListener.cs" />
     <Compile Include="Camera\SagaCaptureCameraLogger.cs" />
     <Compile Include="Camera\SagaCaptureController.cs" />
+    <Compile Include="Camera\SagaCaptureDroneVisual.cs" />
+    <Compile Include="Camera\SagaCaptureDroneModel.cs" />
     <Compile Include="Camera\SagaCaptureEffectMirror.cs" />
     <Compile Include="Camera\SagaCaptureEffects.cs" />
     <Compile Include="Camera\SagaCaptureInterfaceController.cs" />
@@ -72,6 +80,7 @@
     <Compile Include="Flight\ValheimDroneAdapter.cs" />
     <Compile Include="Recording\RecordingController.cs" />
     <Compile Include="Patches\SagaCaptureMenuPatch.cs" />
+    <Compile Include="Patches\SagaCapturePlayerVisibilityPatch.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -79,7 +88,6 @@
     <Content Include="README.md" />
   </ItemGroup>
   <ItemGroup>
-    <_SnapshotExtraFiles Include="$(MSBuildProjectDirectory)\bin\Release\UnityRuntimeCameraRecorder.dll;$(MSBuildProjectDirectory)\bin\Release\FFmpegMediaWriter.dll" />
     <_SnapshotExtraFiles Include="$(MSBuildProjectDirectory)\bin\Release\Direct3DVideoEncoder.dll" Condition="Exists('$(MSBuildProjectDirectory)\bin\Release\Direct3DVideoEncoder.dll')" />
   </ItemGroup>
   <!-- Downloads and extracts the mutable camera recorder snapshot only when its ETag changes. -->
