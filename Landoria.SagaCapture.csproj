@@ -10,6 +10,7 @@
     <RootNamespace>Landoria.SagaCapture</RootNamespace>
     <AssemblyName>Landoria.SagaCapture</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <UnityManagedPath>$(ValheimGamePath)\valheim_Data\Managed</UnityManagedPath>
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
     <CameraRecorderAssetUrl>https://github.com/UnityRuntimeCameraRecorder/UnityRuntimeCameraRecorder/releases/download/1.0.0-snapshot/UnityRuntimeCameraRecorder-1.0.0-snapshot-windows-x64.zip</CameraRecorderAssetUrl>
     <CameraRecorderDownloadDirectory>$(MSBuildProjectDirectory)\obj\$(Configuration)\downloads</CameraRecorderDownloadDirectory>
@@ -45,13 +46,20 @@
       <Link>Direct3DVideoEncoder.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="external\DronePilot\bin\$(Configuration)\net48\YamlDotNet.dll"><Link>YamlDotNet.dll</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+    <Content Include="external\DronePilot\bin\$(Configuration)\net48\Newtonsoft.Json.dll"><Link>Newtonsoft.Json.dll</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="external\DronePilot\DronePilot.csproj">
+      <Project>{8A80B99F-CA09-4E77-91EA-37267C259192}</Project>
+      <Name>DronePilot</Name>
+      <AdditionalProperties>UnityManagedPath=$(ValheimGamePath)\valheim_Data\Managed</AdditionalProperties>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration\ConfigWatcher.cs" />
     <Compile Include="Configuration\Preference.cs" />
     <Compile Include="Infrastructure\SagaCapturePlugin.cs" />
-    <Compile Include="Infrastructure\SagaCapturePositionLogger.cs" />
-    <Compile Include="Infrastructure\OrbitMotionLogger.cs" />
     <Compile Include="Camera\SagaCaptureAudioListener.cs" />
     <Compile Include="Camera\SagaCaptureCameraLogger.cs" />
     <Compile Include="Camera\SagaCaptureController.cs" />
@@ -61,16 +69,7 @@
     <Compile Include="Camera\SagaCaptureMainCamera.cs" />
     <Compile Include="Camera\SagaCaptureRig.cs" />
     <Compile Include="Camera\SagaCaptureReturnTransition.cs" />
-    <Compile Include="Flight\DroneEnvironment.cs" />
-    <Compile Include="Flight\DroneFraming.cs" />
-    <Compile Include="Flight\DroneFlightController.cs" />
-    <Compile Include="Flight\OrbitFlightController.cs" />
-    <Compile Include="Flight\DroneFlightMode.cs" />
-    <Compile Include="Flight\DroneLook.cs" />
-    <Compile Include="Flight\DroneMotion.cs" />
-    <Compile Include="Flight\DroneTrajectoryPlanner.cs" />
-    <Compile Include="Flight\TrailingRoutePlanner.cs" />
-    <Compile Include="Flight\TrailingFlightController.cs" />
+    <Compile Include="Flight\ValheimDroneAdapter.cs" />
     <Compile Include="Recording\RecordingController.cs" />
     <Compile Include="Patches\SagaCaptureMenuPatch.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -96,8 +95,7 @@
     </PropertyGroup>
     <Error Condition="'$(_CameraRecorderHttpStatus)' != '200' And '$(_CameraRecorderHttpStatus)' != '304'"
            Text="Unexpected HTTP status $(_CameraRecorderHttpStatus) while downloading UnityRuntimeCameraRecorder." />
-    <RemoveDir Directories="$(MSBuildProjectDirectory)\lib" Condition="'$(_CameraRecorderHttpStatus)' == '200'" />
-    <MakeDir Directories="$(MSBuildProjectDirectory)\lib" Condition="'$(_CameraRecorderHttpStatus)' == '200'" />
+    <Delete Files="$(MSBuildProjectDirectory)\lib\UnityRuntimeCameraRecorder.dll;$(MSBuildProjectDirectory)\lib\FFmpegMediaWriter.dll;$(MSBuildProjectDirectory)\lib\Direct3DVideoEncoder.dll" Condition="'$(_CameraRecorderHttpStatus)' == '200'" />
     <Unzip SourceFiles="$(CameraRecorderArchive)"
            DestinationFolder="$(MSBuildProjectDirectory)\lib"
            Condition="'$(_CameraRecorderHttpStatus)' == '200'" />

@@ -97,9 +97,18 @@ namespace Landoria.SagaCapture
             }
 
             _previewWarmupRoutine = null;
-            _gameplayCamera.enabled = false;
-            _cameraRig.BeginPreview();
-            _interface.Hide();
+            try
+            {
+                _gameplayCamera.enabled = false;
+                _cameraRig.BeginPreview();
+                _interface.Hide();
+            }
+            catch (Exception exception)
+            {
+                SagaCapturePlugin.Log.LogError(exception);
+                Notify($"Saga Capture failed: {exception.Message}");
+                CompleteStopPreview();
+            }
         }
 
         // Ensures the player camera exists before creating its clone.

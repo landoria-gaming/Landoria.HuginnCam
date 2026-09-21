@@ -1,0 +1,3 @@
+[submodule "external/DronePilot"]
+	path = external/DronePilot
+	url = https://github.com/UnityRuntimeCameraRecorder/DronePilot.git

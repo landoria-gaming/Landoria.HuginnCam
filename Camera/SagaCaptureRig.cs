@@ -1,4 +1,5 @@
 using UnityEngine;
+using DronePilot;
 
 namespace Landoria.SagaCapture
 {
@@ -12,22 +13,11 @@ namespace Landoria.SagaCapture
         private RenderTexture _offscreenTarget;
         private readonly SagaCaptureMainCamera _mainCamera =
             new SagaCaptureMainCamera();
-        private readonly SagaCapturePositionLogger _positionLogger =
-            new SagaCapturePositionLogger();
-        private readonly OrbitMotionLogger _orbitMotionLogger =
-            new OrbitMotionLogger();
-        private readonly DroneEnvironment _environment = new DroneEnvironment();
-        private readonly DroneFlightController _flight =
-            new DroneFlightController();
-        private readonly DroneTrajectoryPlanner _trajectory =
-            new DroneTrajectoryPlanner();
-        private readonly DroneMotion _motion = new DroneMotion();
-        private readonly DroneLook _look = new DroneLook();
-        private readonly DroneFraming _framing = new DroneFraming();
+        private DronePilotController _pilot;
         private readonly SagaCaptureEffects _effects = new SagaCaptureEffects();
         private bool _flightEnabled;
+        private bool _debugSnapshots;
         private bool _synchronizeSourcePose = true;
-        private bool _flightInitialized;
 
         internal Camera Camera => _camera;
 
@@ -35,6 +25,7 @@ namespace Landoria.SagaCapture
         internal void Initialize(Camera sourceCamera, bool transferAudio = true)
         {
             _sourceCamera = sourceCamera;
+            _debugSnapshots = Preference.CreateTelemetry(transferAudio).Enabled;
             _mainCamera.Initialize(sourceCamera);
             GameObject cameraObject = new GameObject("SagaCaptureCamera");
             cameraObject.transform.SetParent(transform, false);
@@ -46,7 +37,7 @@ namespace Landoria.SagaCapture
             _effects.Initialize(sourceCamera, cameraObject);
             SynchronizePose();
             SagaCaptureCameraLogger.LogSnapshot(
-                "created", _sourceCamera, _camera);
+                "created", _sourceCamera, _camera, _debugSnapshots);
             if (transferAudio)
             {
                 TransferAudio(sourceCamera, cameraObject);
@@ -60,15 +51,26 @@ namespace Landoria.SagaCapture
             _mainCamera.Take(_camera);
             _camera.targetTexture = null;
             _camera.enabled = true;
-            BeginFlight();
+            BeginFlight(true);
         }
 
         // Allows autonomous movement after camera preparation is complete.
-        internal void BeginFlight()
+        internal void BeginFlight(bool preview = false)
         {
             SynchronizePose();
             SagaCaptureCameraLogger.LogSnapshot(
-                "flight start", _sourceCamera, _camera);
+                "flight start", _sourceCamera, _camera, _debugSnapshots);
+            Player player = Player.m_localPlayer;
+            if (player == null)
+            {
+                throw new System.InvalidOperationException(
+                    "The local player is unavailable.");
+            }
+            var adapter = new ValheimDroneAdapter();
+            _pilot = new DronePilotController(
+                _camera, player.gameObject, Preference.DroneConfigPath,
+                adapter.CreateWorld(), adapter.CreateProfiles(),
+                Vector3.up * 1.25f, Preference.CreateTelemetry(preview));
             _flightEnabled = true;
         }
 
@@ -77,6 +79,8 @@ namespace Landoria.SagaCapture
         {
             _flightEnabled = false;
             _synchronizeSourcePose = false;
+            _pilot?.Dispose();
+            _pilot = null;
         }
 
         // Starts invisible rendering for the recording pipeline.
@@ -114,103 +118,14 @@ namespace Landoria.SagaCapture
                 return;
             }
 
-            if (!_flightInitialized)
-            {
-                InitializeFlight(player);
-            }
-
-            UpdateFlight(player);
-            _positionLogger.Update(player, _camera);
-        }
-
-        // Starts continuous motion from the cloned gameplay camera pose.
-        private void InitializeFlight(Player player)
-        {
-            _motion.Initialize(player.GetVelocity());
-            _look.Initialize();
-            _flightInitialized = true;
-        }
-
-        // Advances environment, planning, movement, and framing policies.
-        private void UpdateFlight(Player player)
-        {
-            Vector3 position = _camera.transform.position;
-            _environment.Update(position);
-            Vector3 desired = _flight.Update(
-                player, position, _motion.Speed,
-                _environment, out float targetSpeed);
-            Vector3 probeTarget = _flight.TrajectoryProbeTarget;
-            bool recoveringFraming = false;
-            if (_flight.Mode == DroneFlightMode.TrailingFlight)
-            {
-                desired = _flight.PlanTrailingRoute(
-                    position, desired, _motion.Velocity,
-                    player.transform.position,
-                    player.GetVelocity());
-                probeTarget = desired;
-            }
-            Vector3 focus = GetPlayerFocus(player);
-            if (!_framing.IsVisible(_camera, focus))
-            {
-                recoveringFraming = true;
-                desired = _framing.GetRecoveryTarget(
-                    player, position);
-                probeTarget = desired;
-                targetSpeed = Mathf.Max(targetSpeed, player.m_runSpeed);
-            }
-            float terrainClearance =
-                Mathf.Max(
-                    _flight.GetTerrainClearance(_motion.Speed),
-                    DroneTrajectoryPlanner.CameraRadius);
-            desired = _trajectory.Plan(
-                position, desired, probeTarget,
-                _motion.Velocity, terrainClearance,
-                _flight.Mode != DroneFlightMode.OrbitFlight);
-            float playerHeight = player.transform.position.y;
-            desired.y = Mathf.Max(desired.y, playerHeight);
-            Vector3 next = _flight.Mode == DroneFlightMode.OrbitFlight &&
-                           !recoveringFraming
-                ? _motion.StepOrbit(
-                    position, desired, probeTarget - desired, targetSpeed)
-                : _motion.Step(
-                    position, desired, targetSpeed,
-                    _trajectory.EmergencyAvoidance);
-            if (_flight.Mode == DroneFlightMode.OrbitFlight)
-            {
-                _orbitMotionLogger.Update(
-                    player.transform.position, position,
-                    desired, probeTarget,
-                    _motion.Velocity, _motion.Acceleration);
-            }
-            _camera.transform.position = KeepAboveTerrain(
-                next, terrainClearance, playerHeight);
-            _look.Update(_camera.transform, focus);
-        }
-
-        // Returns a stable point near the player's upper body.
-        private static Vector3 GetPlayerFocus(Player player)
-        {
-            return player.transform.position + Vector3.up * 1.25f;
-        }
-
-        // Keeps the drone above both the terrain and the player's world Y.
-        private static Vector3 KeepAboveTerrain(
-            Vector3 position, float terrainClearance, float playerHeight)
-        {
-            position.y = Mathf.Max(position.y, playerHeight);
-            if (ZoneSystem.instance != null &&
-                ZoneSystem.instance.GetGroundHeight(position, out float ground))
-            {
-                position.y = Mathf.Max(
-                    position.y, ground + terrainClearance);
-            }
-
-            return position;
+            _pilot?.Update(player.GetVelocity(), player.m_runSpeed);
         }
 
         // Restores listeners and destroys the secondary camera.
         internal void Dispose()
         {
+            _pilot?.Dispose();
+            _pilot = null;
             EndOffscreenRendering();
             _mainCamera.Restore(_camera);
             if (_originalListener != null)

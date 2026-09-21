@@ -8,10 +8,10 @@ namespace Landoria.SagaCapture
     {
         // Logs source, Saga camera, and player-relative framing parameters.
         internal static void LogSnapshot(
-            string phase, Camera source, Camera sagaCamera)
+            string phase, Camera source, Camera sagaCamera,
+            bool enabled)
         {
-            if (!Preference.DebugLogs ||
-                source == null || sagaCamera == null)
+            if (!enabled || source == null || sagaCamera == null)
             {
                 return;
             }

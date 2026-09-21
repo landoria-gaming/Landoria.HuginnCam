@@ -87,10 +87,10 @@ namespace Landoria.SagaCapture
             {
                 _recorder = gameObject.AddComponent<Recorder>();
                 SubscribeRecorder();
+                _cameraRig.BeginFlight();
                 _recorder.StartRecording(
                     CreateSequence(), _gameplayListener,
                     CreateSettings(_outputPath));
-                _cameraRig.BeginFlight();
             }
             catch (Exception exception)
             {
