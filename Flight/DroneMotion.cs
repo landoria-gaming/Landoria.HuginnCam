@@ -5,9 +5,13 @@ namespace Landoria.SagaCapture
     // Moves the drone with bounded acceleration and gradual force changes.
     internal sealed class DroneMotion
     {
-        private const float MaximumAcceleration = 1f;
-        private const float MaximumJerk = 1.5f;
-        private const float MaximumVerticalSpeed = 0.4f;
+        private const float MaximumAcceleration = 3f;
+        private const float MaximumJerk = 10f;
+        private const float EmergencyAcceleration = 8f;
+        private const float EmergencyJerk = 30f;
+        private const float CruiseVerticalSpeed = 0.4f;
+        private const float CatchUpVerticalSpeed = 2.5f;
+        private const float MaximumVerticalAcceleration = 1.5f;
         private const float VerticalSmoothTime = 1.25f;
         private const float HorizontalArrivalTime = 1f;
         private const float OrbitRadialDeadZone = 0.2f;
@@ -33,7 +37,8 @@ namespace Landoria.SagaCapture
 
         // Advances one jerk-limited movement step toward the destination.
         internal Vector3 Step(
-            Vector3 position, Vector3 destination, float targetSpeed)
+            Vector3 position, Vector3 destination, float targetSpeed,
+            bool emergencyAvoidance = false)
         {
             Vector3 offset = destination - position;
             offset.y = 0f;
@@ -42,7 +47,9 @@ namespace Landoria.SagaCapture
             Vector3 desiredVelocity = offset.sqrMagnitude > 0.0001f
                 ? offset.normalized * desiredSpeed
                 : Vector3.zero;
-            return Advance(position, destination.y, desiredVelocity);
+            return Advance(
+                position, destination.y, desiredVelocity,
+                emergencyAvoidance);
         }
 
         // Flies continuously along an orbit with a separate radial correction.
@@ -78,22 +85,34 @@ namespace Landoria.SagaCapture
         // Applies jerk-limited acceleration and the shared vertical smoothing.
         private Vector3 Advance(
             Vector3 position, float destinationHeight,
-            Vector3 desiredVelocity)
+            Vector3 desiredVelocity, bool emergencyAvoidance = false)
         {
             float deltaTime = Mathf.Max(Time.deltaTime, 0.0001f);
+            float accelerationLimit = emergencyAvoidance
+                ? EmergencyAcceleration : MaximumAcceleration;
+            float jerkLimit = emergencyAvoidance
+                ? EmergencyJerk : MaximumJerk;
             Vector3 desiredAcceleration = Vector3.ClampMagnitude(
                 (desiredVelocity - _velocity) / deltaTime,
-                MaximumAcceleration);
+                accelerationLimit);
             desiredAcceleration.y = 0f;
             _acceleration = Vector3.MoveTowards(
                 _acceleration, desiredAcceleration,
-                MaximumJerk * deltaTime);
+                jerkLimit * deltaTime);
             _velocity += _acceleration * deltaTime;
             _velocity.y = 0f;
             Vector3 next = position + _velocity * deltaTime;
-            next.y = Mathf.SmoothDamp(
-                position.y, destinationHeight, ref _verticalVelocity,
-                VerticalSmoothTime, MaximumVerticalSpeed, deltaTime);
+            float heightError = destinationHeight - position.y;
+            float verticalSpeedLimit = Mathf.Lerp(
+                CruiseVerticalSpeed, CatchUpVerticalSpeed,
+                Mathf.InverseLerp(2f, 10f, Mathf.Abs(heightError)));
+            float desiredVerticalSpeed = Mathf.Clamp(
+                heightError / VerticalSmoothTime,
+                -verticalSpeedLimit, verticalSpeedLimit);
+            _verticalVelocity = Mathf.MoveTowards(
+                _verticalVelocity, desiredVerticalSpeed,
+                MaximumVerticalAcceleration * deltaTime);
+            next.y = position.y + _verticalVelocity * deltaTime;
             return next;
         }
     }

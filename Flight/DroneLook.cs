@@ -7,7 +7,7 @@ namespace Landoria.SagaCapture
     {
         private const float RotationSmoothTime = 0.8f;
         private const float MaximumRotationSpeed = 45f;
-        private const float MaximumPitchAngle = 25f;
+        private const float MaximumPitchAngle = 70f;
         private float _yawVelocity;
         private float _pitchVelocity;
 

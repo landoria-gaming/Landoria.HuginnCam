@@ -21,8 +21,6 @@ namespace Landoria.SagaCapture
             new DroneFlightController();
         private readonly DroneTrajectoryPlanner _trajectory =
             new DroneTrajectoryPlanner();
-        private readonly TrailingRoutePlanner _trailingRoute =
-            new TrailingRoutePlanner();
         private readonly DroneMotion _motion = new DroneMotion();
         private readonly DroneLook _look = new DroneLook();
         private readonly DroneFraming _framing = new DroneFraming();
@@ -122,7 +120,7 @@ namespace Landoria.SagaCapture
             }
 
             UpdateFlight(player);
-            _positionLogger.Update(player, _camera.transform.position);
+            _positionLogger.Update(player, _camera);
         }
 
         // Starts continuous motion from the cloned gameplay camera pose.
@@ -145,14 +143,10 @@ namespace Landoria.SagaCapture
             bool recoveringFraming = false;
             if (_flight.Mode == DroneFlightMode.TrailingFlight)
             {
-                desired = _trailingRoute.Plan(
+                desired = _flight.PlanTrailingRoute(
                     position, desired, _motion.Velocity,
                     player.GetVelocity());
                 probeTarget = desired;
-            }
-            else
-            {
-                _trailingRoute.Reset();
             }
             Vector3 focus = GetPlayerFocus(player);
             if (!_framing.IsVisible(_camera, focus))
@@ -171,11 +165,15 @@ namespace Landoria.SagaCapture
                 position, desired, probeTarget,
                 _motion.Velocity, terrainClearance,
                 _flight.Mode != DroneFlightMode.OrbitFlight);
+            float playerHeight = player.transform.position.y;
+            desired.y = Mathf.Max(desired.y, playerHeight);
             Vector3 next = _flight.Mode == DroneFlightMode.OrbitFlight &&
                            !recoveringFraming
                 ? _motion.StepOrbit(
                     position, desired, probeTarget - desired, targetSpeed)
-                : _motion.Step(position, desired, targetSpeed);
+                : _motion.Step(
+                    position, desired, targetSpeed,
+                    _trajectory.EmergencyAvoidance);
             if (_flight.Mode == DroneFlightMode.OrbitFlight)
             {
                 _orbitMotionLogger.Update(
@@ -184,7 +182,7 @@ namespace Landoria.SagaCapture
                     _motion.Velocity, _motion.Acceleration);
             }
             _camera.transform.position = KeepAboveTerrain(
-                next, terrainClearance);
+                next, terrainClearance, playerHeight);
             _look.Update(_camera.transform, focus);
         }
 
@@ -194,10 +192,11 @@ namespace Landoria.SagaCapture
             return player.transform.position + Vector3.up * 1.25f;
         }
 
-        // Enforces the active mode's terrain clearance on every frame.
+        // Keeps the drone above both the terrain and the player's world Y.
         private static Vector3 KeepAboveTerrain(
-            Vector3 position, float terrainClearance)
+            Vector3 position, float terrainClearance, float playerHeight)
         {
+            position.y = Mathf.Max(position.y, playerHeight);
             if (ZoneSystem.instance != null &&
                 ZoneSystem.instance.GetGroundHeight(position, out float ground))
             {

@@ -64,11 +64,13 @@
     <Compile Include="Flight\DroneEnvironment.cs" />
     <Compile Include="Flight\DroneFraming.cs" />
     <Compile Include="Flight\DroneFlightController.cs" />
+    <Compile Include="Flight\OrbitFlightController.cs" />
     <Compile Include="Flight\DroneFlightMode.cs" />
     <Compile Include="Flight\DroneLook.cs" />
     <Compile Include="Flight\DroneMotion.cs" />
     <Compile Include="Flight\DroneTrajectoryPlanner.cs" />
     <Compile Include="Flight\TrailingRoutePlanner.cs" />
+    <Compile Include="Flight\TrailingFlightController.cs" />
     <Compile Include="Recording\RecordingController.cs" />
     <Compile Include="Patches\SagaCaptureMenuPatch.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

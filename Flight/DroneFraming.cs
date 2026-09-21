@@ -7,6 +7,7 @@ namespace Landoria.SagaCapture
     {
         private const float RecoveryDistance = 4f;
         private const float RecoveryHeight = 2f;
+        private const float ComfortableRecoveryPitch = 55f;
 
         // Returns whether the player focus remains inside the camera view.
         internal bool IsVisible(Camera camera, Vector3 playerFocus)
@@ -30,8 +31,14 @@ namespace Landoria.SagaCapture
             }
 
             radial.Normalize();
+            float height = Mathf.Max(0f,
+                dronePosition.y - player.transform.position.y);
+            float distanceForHeight = height /
+                Mathf.Tan(ComfortableRecoveryPitch * Mathf.Deg2Rad);
+            float recoveryDistance = Mathf.Max(
+                RecoveryDistance, distanceForHeight);
             Vector3 target = player.transform.position +
-                             radial * RecoveryDistance;
+                             radial * recoveryDistance;
             target.y = GetGroundHeight(target) + RecoveryHeight;
             return target;
         }

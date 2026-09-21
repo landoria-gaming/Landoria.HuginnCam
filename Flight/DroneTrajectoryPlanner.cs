@@ -38,6 +38,7 @@ namespace Landoria.SagaCapture
         private float _avoidanceSide;
         private float _avoidanceSideHoldUntil;
         private bool _initialized;
+        internal bool EmergencyAvoidance { get; private set; }
 
         // Reuses one plan for 100 ms before simulating routes again.
         internal Vector3 Plan(
@@ -65,6 +66,7 @@ namespace Landoria.SagaCapture
                 ref _terrainLiftVelocity, smoothTime,
                 Mathf.Infinity, elapsed);
             Vector3 target = desired + Vector3.up * _smoothedTerrainLift;
+            EmergencyAvoidance = false;
             Vector3 routeTarget = target;
             Vector3 reactiveProbe = probeTarget;
             if (useReactiveObstacleAvoidance)
@@ -90,7 +92,7 @@ namespace Landoria.SagaCapture
         }
 
         // Prioritizes the path the moving drone cannot instantly leave.
-        private static Vector3 GetReactiveProbe(
+        private Vector3 GetReactiveProbe(
             Vector3 origin, Vector3 desiredProbe, Vector3 velocity,
             float lookAhead, out bool followsMomentum)
         {
@@ -101,11 +103,16 @@ namespace Landoria.SagaCapture
             }
 
             Vector3 momentumProbe = origin + velocity.normalized * lookAhead;
-            if (!HasObstacle(origin, momentumProbe, lookAhead))
+            if (!TryGetObstacle(
+                    origin, momentumProbe, lookAhead,
+                    out Collider obstacle))
             {
                 return desiredProbe;
             }
 
+            // A close obstacle needs faster steering than normal flight.
+            EmergencyAvoidance = Vector3.Distance(
+                origin, obstacle.ClosestPoint(origin)) < 2.5f;
             followsMomentum = true;
             return momentumProbe;
         }
@@ -123,6 +130,8 @@ namespace Landoria.SagaCapture
                 ClearExpiredAvoidanceSide();
                 return target;
             }
+            EmergencyAvoidance |= Vector3.Distance(
+                origin, obstacle.ClosestPoint(origin)) < 2.5f;
             PrepareAvoidanceSide(obstacle);
 
             Vector3 direction = target - origin;
