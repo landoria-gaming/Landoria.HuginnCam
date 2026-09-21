@@ -50,10 +50,9 @@
       <Link>Direct3DVideoEncoder.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="assets\sagacapture-drone">
-      <Link>sagacapture-drone</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <EmbeddedResource Include="assets\sagacapture-drone">
+      <LogicalName>Landoria.SagaCapture.sagacapture-drone</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DronePilot\DronePilot.csproj">

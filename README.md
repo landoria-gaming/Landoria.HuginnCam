@@ -39,9 +39,10 @@ The build merges DronePilot, its YAML/JSON libraries, and the managed recorder
 libraries into `Landoria.SagaCapture.dll`. Unity and Valheim assemblies remain
 external; the native `Direct3DVideoEncoder.dll` stays beside the plugin.
 
-The visible drone is loaded from `assets/sagacapture-drone`. Its Unity build
-project lives in the sibling `../SagaCapture.ModelBuild` directory. Building
-that project copies the verified bundle into SagaCapture's `assets` directory.
+The visible drone's Unity AssetBundle is embedded in `Landoria.SagaCapture.dll`.
+Its Unity build project lives in the sibling `../SagaCapture.ModelBuild`
+directory. Building that project updates SagaCapture's `assets/sagacapture-drone`
+source file; the .NET build embeds it in the plugin.
 
 FFmpeg must be available through the `FFMPEG_PATH` environment variable, which
 must point to a directory containing `ffmpeg.exe`.

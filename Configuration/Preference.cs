@@ -17,7 +17,6 @@ namespace Landoria.SagaCapture
         private static ConfigEntry<int> maximumFrameRate;
         private static ConfigEntry<float> sagaCameraFov;
         private static ConfigEntry<bool> showDroneVisual;
-        private static ConfigEntry<string> droneModelDirectory;
         private static ConfigEntry<bool> previewTelemetry;
         private static ConfigEntry<bool> captureTelemetry;
         private static ConfigEntry<string> telemetryRoot;
@@ -41,8 +40,6 @@ namespace Landoria.SagaCapture
         internal static int MaximumFrameRate => maximumFrameRate.Value;
         internal static float SagaCameraFOV => sagaCameraFov.Value;
         internal static bool ShowDroneVisual => showDroneVisual.Value;
-        internal static string DroneModelBundlePath => Path.Combine(
-            droneModelDirectory.Value, "sagacapture-drone");
         internal static float OpenMaximumHeight => openMaximumHeight.Value;
         internal static float OpenMaximumOrbitRadius => openMaximumRadius.Value;
         internal static float ForestMaximumHeight => forestMaximumHeight.Value;
@@ -105,9 +102,6 @@ namespace Landoria.SagaCapture
             showDroneVisual = config.Bind(
                 "Camera", "ShowDroneVisual", true,
                 "Show the camera-sized glowing drone to the player in CaptureMode. It has no shadow and is hidden from the recording.");
-            droneModelDirectory = config.Bind(
-                "Camera", "DroneModelDirectory", PluginDirectory(),
-                "Directory containing sagacapture-drone. Changes apply to the next camera session.");
             previewTelemetry = config.Bind("Telemetry", "PreviewEnabled",
                 true, "Collect drone diagnostics in PreviewMode.");
             captureTelemetry = config.Bind("Telemetry", "CaptureEnabled",
@@ -147,7 +141,6 @@ namespace Landoria.SagaCapture
             maximumFrameRate.Value = 30;
             sagaCameraFov.Value = 65f;
             showDroneVisual.Value = true;
-            droneModelDirectory.Value = PluginDirectory();
             previewTelemetry.Value = true;
             captureTelemetry.Value = false;
             telemetryRoot.Value = "";
@@ -163,12 +156,6 @@ namespace Landoria.SagaCapture
             minimumTreeCount.Value = 2;
             config.Save();
             ConfigWatcher.IgnoreCurrentFileVersion();
-        }
-
-        // Finds the folder containing the installed SagaCapture assembly.
-        private static string PluginDirectory()
-        {
-            return Path.GetDirectoryName(typeof(SagaCapturePlugin).Assembly.Location);
         }
     }
 }
