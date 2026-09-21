@@ -11,10 +11,10 @@ namespace Landoria.SagaCapture
         private const float EmergencyJerk = 60f;
         private const float VelocityResponseTime = 0.25f;
         private const float EmergencyResponseTime = 0.1f;
-        private const float CruiseVerticalSpeed = 0.4f;
+        private const float CruiseVerticalSpeed = 0.6f;
         private const float CatchUpVerticalSpeed = 2.5f;
-        private const float MaximumVerticalAcceleration = 1.5f;
-        private const float VerticalSmoothTime = 1.25f;
+        private const float MaximumVerticalAcceleration = 2.5f;
+        private const float VerticalSmoothTime = 0.9f;
         private const float HorizontalArrivalTime = 1f;
         private const float OrbitRadialDeadZone = 0.2f;
         private const float OrbitRadialCorrectionTime = 2.5f;

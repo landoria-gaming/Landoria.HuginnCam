@@ -13,11 +13,16 @@ namespace Landoria.SagaCapture
         private const float AltitudeBlendStart = 2f;
         private const float AltitudeBlendEnd = 8f;
         private const float AltitudeCycleRate = 0.08f;
-        private const float AltitudeSmoothTime = 3f;
-        private const float MaximumAltitudeChangeSpeed = 0.4f;
+        private const float AltitudeSmoothTime = 2f;
+        private const float MaximumAltitudeChangeSpeed = 0.6f;
         private const float PreferredAltitudeVariation = 1f;
+        private const float MaximumCatchUpBonus = 2f;
+        private const float CatchUpSpeedResponse = 3f;
+        private const float CatchUpBrakeResponse = 6f;
         private float _altitude;
         private float _altitudeVelocity;
+        private float _commandedSpeed;
+        private bool _speedInitialized;
         private bool _altitudeInitialized;
 
         // Predicts a short trailing route around nearby obstacles.
@@ -36,6 +41,7 @@ namespace Landoria.SagaCapture
             _route.Reset();
             _altitudeInitialized = false;
             _altitudeVelocity = 0f;
+            _speedInitialized = false;
         }
 
         // Builds a trailing destination with altitude-dependent distance.
@@ -71,9 +77,30 @@ namespace Landoria.SagaCapture
         {
             float playerSpeed = Flatten(player.GetVelocity()).magnitude;
             float error = Flatten(target - dronePosition).magnitude;
-            return Mathf.Min(
+            float bonus = Mathf.Min(
+                error * 0.5f, MaximumCatchUpBonus);
+            if (playerSpeed > 0.5f)
+            {
+                Vector3 travel = Flatten(player.GetVelocity()).normalized;
+                float behind = Vector3.Dot(
+                    Flatten(player.transform.position - dronePosition),
+                    travel);
+                bonus *= Mathf.InverseLerp(5f, 10f, behind);
+            }
+            float desiredSpeed = Mathf.Min(
                 player.m_runSpeed * 1.5f,
-                playerSpeed + error * 0.75f);
+                playerSpeed + bonus);
+            if (!_speedInitialized)
+            {
+                _commandedSpeed = playerSpeed;
+                _speedInitialized = true;
+            }
+            _commandedSpeed = Mathf.MoveTowards(
+                _commandedSpeed, desiredSpeed,
+                (desiredSpeed < _commandedSpeed
+                    ? CatchUpBrakeResponse : CatchUpSpeedResponse) *
+                Time.deltaTime);
+            return _commandedSpeed;
         }
 
         // Prefers low flight while respecting the distance-based height cap.
