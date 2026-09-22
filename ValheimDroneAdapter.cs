@@ -44,7 +44,7 @@ namespace Landoria.SagaCapture
         }
 
         // Queries Valheim's world height at one Unity position.
-        private static float? GroundHeight(Vector3 position)
+        internal static float? GroundHeight(Vector3 position)
         {
             return ZoneSystem.instance != null &&
                 ZoneSystem.instance.GetGroundHeight(position, out float height)

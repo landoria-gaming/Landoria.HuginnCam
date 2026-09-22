@@ -19,11 +19,34 @@ namespace Landoria.SagaCapture
         private Coroutine _warmupRoutine;
         private AudioListener _gameplayListener;
         private string _outputPath;
+        private int _lastVideoSourceIndex = -1;
         private readonly SagaCaptureFrameRateLimit _frameRateLimit =
             new SagaCaptureFrameRateLimit();
 
         internal bool IsActive => _recorder != null || _warmupRoutine != null;
         internal bool IsCameraActive => _cameraRig?.IsFlying == true;
+        internal bool IsDroneImageActive =>
+            _recorder?.IsCapturing == true &&
+            _recorder.ActiveVideoSourceIndex == 0;
+
+        // Reframes the drone whenever a mixed recording returns from gameplay.
+        private void Update()
+        {
+            if (_recorder?.IsCapturing != true ||
+                Preference.Content != OutputContent.DroneAndGameplay)
+            {
+                return;
+            }
+            int sourceIndex = _recorder.ActiveVideoSourceIndex;
+            if (_lastVideoSourceIndex == 1 && sourceIndex == 0)
+            {
+                _cameraRig?.CutViewpoint();
+            }
+            if (sourceIndex >= 0)
+            {
+                _lastVideoSourceIndex = sourceIndex;
+            }
+        }
 
         // Starts a recording when the recorder is idle.
         internal void StartRecording()
@@ -93,6 +116,7 @@ namespace Landoria.SagaCapture
             try
             {
                 _recorder = gameObject.AddComponent<Recorder>();
+                _lastVideoSourceIndex = -1;
                 SubscribeRecorder();
                 _cameraRig.BeginFlight();
                 _recorder.StartRecording(
@@ -275,6 +299,7 @@ namespace Landoria.SagaCapture
                 _recorder = null;
             }
             _gameplayListener = null;
+            _lastVideoSourceIndex = -1;
         }
 
         // Releases the offscreen camera.

@@ -19,6 +19,11 @@ namespace Landoria.SagaCapture
         private bool _previewFlight;
         private bool _debugSnapshots;
         private bool _synchronizeSourcePose = true;
+        private float _nextViewpointCut;
+        private const float NearViewpointRadius = 3f;
+        private const float DistantViewpointRadius = 8f;
+        private const float MinimumCutInterval = 8f;
+        private const float MaximumCutInterval = 15f;
 
         internal Camera Camera => _camera;
         internal bool IsFlying => _flightEnabled;
@@ -64,7 +69,10 @@ namespace Landoria.SagaCapture
         // Allows autonomous movement after camera preparation is complete.
         internal void BeginFlight(bool preview = false)
         {
-            _mainCamera.Take(_camera);
+            if (preview)
+            {
+                _mainCamera.Take(_camera);
+            }
             _camera.gameObject.AddComponent<SagaCaptureFrameRateDisplay>();
             SynchronizePose();
             SagaCaptureCameraLogger.LogSnapshot(
@@ -91,6 +99,7 @@ namespace Landoria.SagaCapture
                     LogError = message => SagaCapturePlugin.Log.LogError(message)
                 });
             _flightEnabled = true;
+            ScheduleViewpointCut();
         }
 
         // Stops autonomous flight without snapping back to the source pose.
@@ -138,9 +147,57 @@ namespace Landoria.SagaCapture
                 return;
             }
 
+            if ((_previewFlight ||
+                 Preference.Content == OutputContent.DroneOnly) &&
+                Time.time >= _nextViewpointCut)
+            {
+                CutViewpoint(player);
+            }
             _pilot?.Update(player.GetVelocity(), player.m_runSpeed);
             _pilot?.SetVisual(!_previewFlight && Preference.ShowDroneVisual,
                 Preference.ShellColor);
+        }
+
+        // Cuts on demand when a mixed recording returns to the drone source.
+        internal void CutViewpoint()
+        {
+            Player player = Player.m_localPlayer;
+            if (_flightEnabled && player != null)
+            {
+                CutViewpoint(player);
+            }
+        }
+
+        // Cuts to a random distance at a substantially different angle.
+        private void CutViewpoint(Player player)
+        {
+            Vector3 focus = player.transform.position + Vector3.up * 1.60f;
+            Vector3 radial = _camera.transform.position - focus;
+            radial.y = 0f;
+            if (radial.sqrMagnitude < 0.01f)
+            {
+                radial = -player.transform.forward;
+            }
+            float angle = Random.Range(110f, 250f);
+            radial = Quaternion.Euler(0f, angle, 0f) * radial.normalized;
+            float radius = Random.Range(
+                NearViewpointRadius, DistantViewpointRadius);
+            Vector3 position = focus + radial * radius;
+            float ground = ValheimDroneAdapter.GroundHeight(position) ??
+                           player.transform.position.y;
+            float height = Mathf.Lerp(2f, 4f,
+                Mathf.InverseLerp(NearViewpointRadius,
+                    DistantViewpointRadius, radius));
+            position.y = Mathf.Max(focus.y, ground + height);
+            _pilot?.Reposition(position);
+            ScheduleViewpointCut();
+        }
+
+        // Chooses the next unsynchronized viewpoint-cut time.
+        private void ScheduleViewpointCut()
+        {
+            _nextViewpointCut = Time.time +
+                Random.Range(MinimumCutInterval, MaximumCutInterval);
         }
 
         // Restores listeners and destroys the secondary camera.
