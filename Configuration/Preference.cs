@@ -1,6 +1,7 @@
 using BepInEx.Configuration;
 using BepInEx;
 using DronePilot;
+using DronePilot.Telemetry;
 using System.IO;
 using Landoria.Shared;
 using UnityEngine;
@@ -17,6 +18,7 @@ namespace Landoria.SagaCapture
         private static ConfigEntry<int> maximumFrameRate;
         private static ConfigEntry<float> sagaCameraFov;
         private static ConfigEntry<bool> showDroneVisual;
+        private static ConfigEntry<DroneShellColor> droneColor;
         private static ConfigEntry<bool> previewTelemetry;
         private static ConfigEntry<bool> captureTelemetry;
         private static ConfigEntry<string> telemetryRoot;
@@ -40,6 +42,7 @@ namespace Landoria.SagaCapture
         internal static int MaximumFrameRate => maximumFrameRate.Value;
         internal static float SagaCameraFOV => sagaCameraFov.Value;
         internal static bool ShowDroneVisual => showDroneVisual.Value;
+        internal static DroneShellColor ShellColor => droneColor.Value;
         internal static float OpenMaximumHeight => openMaximumHeight.Value;
         internal static float OpenMaximumOrbitRadius => openMaximumRadius.Value;
         internal static float ForestMaximumHeight => forestMaximumHeight.Value;
@@ -47,13 +50,27 @@ namespace Landoria.SagaCapture
         internal static float TreeScanRadius => treeScanRadius.Value;
         internal static float TreeScanIntervalSeconds => treeScanInterval.Value;
         internal static int MinimumTreeCount => minimumTreeCount.Value;
-        internal static string DroneConfigPath => Path.Combine(
-            Paths.ConfigPath, "SagaCapture", "drone-config.yaml");
+        internal static string DroneConfigPath => GetDroneConfigPath();
+
+        // Preserves existing flight settings when adopting the shorter name.
+        private static string GetDroneConfigPath()
+        {
+            string directory = Path.Combine(Paths.ConfigPath, "SagaCapture");
+            string path = Path.Combine(directory, "config.yaml");
+            string legacy = Path.Combine(directory, "drone-config.yaml");
+            if (!File.Exists(path) && File.Exists(legacy))
+            {
+                File.Copy(legacy, path);
+                SagaCapturePlugin.Log?.LogInfo(
+                    "Copied drone-config.yaml to config.yaml.");
+            }
+            return path;
+        }
 
         // Creates per-session diagnostics options from shared BepInEx settings.
-        internal static TelemetryOptions CreateTelemetry(bool preview)
+        internal static Options CreateTelemetry(bool preview)
         {
-            return new TelemetryOptions
+            return new Options
             {
                 Enabled = preview ? previewTelemetry.Value : captureTelemetry.Value,
                 RootDirectory = string.IsNullOrWhiteSpace(telemetryRoot.Value)
@@ -102,6 +119,9 @@ namespace Landoria.SagaCapture
             showDroneVisual = config.Bind(
                 "Camera", "ShowDroneVisual", true,
                 "Show the camera-sized glowing drone to the player in CaptureMode. It has no shadow and is hidden from the recording.");
+            droneColor = config.Bind(
+                "Camera", "DroneColor", DroneShellColor.Metal,
+                "Drone shell appearance: Metal (Valheim iron texture) or Yellow (the original solid color).");
             previewTelemetry = config.Bind("Telemetry", "PreviewEnabled",
                 true, "Collect drone diagnostics in PreviewMode.");
             captureTelemetry = config.Bind("Telemetry", "CaptureEnabled",
@@ -141,6 +161,7 @@ namespace Landoria.SagaCapture
             maximumFrameRate.Value = 30;
             sagaCameraFov.Value = 65f;
             showDroneVisual.Value = true;
+            droneColor.Value = DroneShellColor.Metal;
             previewTelemetry.Value = true;
             captureTelemetry.Value = false;
             telemetryRoot.Value = "";
@@ -155,7 +176,7 @@ namespace Landoria.SagaCapture
             treeScanInterval.Value = 0.5f;
             minimumTreeCount.Value = 2;
             config.Save();
-            ConfigWatcher.IgnoreCurrentFileVersion();
+            Landoria.Shared.ConfigWatcher.IgnoreCurrentFileVersion();
         }
     }
 }

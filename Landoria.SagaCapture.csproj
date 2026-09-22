@@ -39,7 +39,6 @@
     <Reference Include="UnityEngine.AudioModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnityEngine.AssetBundleModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.AssetBundleModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.UI"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="FFmpegMediaWriter"><HintPath>$(MSBuildProjectDirectory)\lib\FFmpegMediaWriter.dll</HintPath><Private>true</Private></Reference>
     <Reference Include="UnityRuntimeCameraRecorder"><HintPath>$(MSBuildProjectDirectory)\lib\UnityRuntimeCameraRecorder.dll</HintPath><Private>true</Private></Reference>
@@ -50,9 +49,6 @@
       <Link>Direct3DVideoEncoder.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <EmbeddedResource Include="assets\sagacapture-drone">
-      <LogicalName>Landoria.SagaCapture.sagacapture-drone</LogicalName>
-    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DronePilot\DronePilot.csproj">
@@ -68,8 +64,6 @@
     <Compile Include="Camera\SagaCaptureAudioListener.cs" />
     <Compile Include="Camera\SagaCaptureCameraLogger.cs" />
     <Compile Include="Camera\SagaCaptureController.cs" />
-    <Compile Include="Camera\SagaCaptureDroneVisual.cs" />
-    <Compile Include="Camera\SagaCaptureDroneModel.cs" />
     <Compile Include="Camera\SagaCaptureEffectMirror.cs" />
     <Compile Include="Camera\SagaCaptureEffects.cs" />
     <Compile Include="Camera\SagaCaptureInterfaceController.cs" />

@@ -21,11 +21,12 @@ forest/open-area pilot profiles. DronePilot owns orbit and trailing flight but
 never creates the camera or records video.
 
 Flight settings live in the documented
-`BepInEx/config/SagaCapture/drone-config.yaml`. The DLL creates this file with
+`BepInEx/config/SagaCapture/config.yaml`. The DLL creates this file with
 defaults when it is missing and reloads valid changes while flying. BepInEx
 settings control recording, pilot profiles, and separate Preview/Capture
 telemetry switches. Enabled telemetry writes one JSON array per interval under
 `BepInEx/config/SagaCapture/Sessions` by default.
+An existing `drone-config.yaml` is copied to `config.yaml` on first use.
 
 Create a local directory link at `mods/DronePilot` pointing to the DronePilot
 repository before building. On Windows, a directory junction works when
@@ -39,10 +40,12 @@ The build merges DronePilot, its YAML/JSON libraries, and the managed recorder
 libraries into `Landoria.SagaCapture.dll`. Unity and Valheim assemblies remain
 external; the native `Direct3DVideoEncoder.dll` stays beside the plugin.
 
-The visible drone's Unity AssetBundle is embedded in `Landoria.SagaCapture.dll`.
-Its Unity build project lives in the sibling `../SagaCapture.ModelBuild`
-directory. Building that project updates SagaCapture's `assets/sagacapture-drone`
-source file; the .NET build embeds it in the plugin.
+DronePilot owns the visible model and embeds its Unity AssetBundle. SagaCapture
+passes the gameplay camera for viewing and selects visibility and color.
+Set `Camera.DroneColor` to `Metal` (default) or `Yellow` for the original solid
+shell color. Configuration reloads update the visual without recreating it.
+The Unity build project lives in `../SagaCapture.ModelBuild`; it updates
+`../DronePilot/assets/drone` before the .NET build.
 
 FFmpeg must be available through the `FFMPEG_PATH` environment variable, which
 must point to a directory containing `ffmpeg.exe`.

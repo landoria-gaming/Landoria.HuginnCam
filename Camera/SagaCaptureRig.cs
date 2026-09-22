@@ -15,8 +15,8 @@ namespace Landoria.SagaCapture
             new SagaCaptureMainCamera();
         private DronePilotController _pilot;
         private readonly SagaCaptureEffects _effects = new SagaCaptureEffects();
-        private SagaCaptureDroneVisual _visual;
         private bool _flightEnabled;
+        private bool _previewFlight;
         private bool _debugSnapshots;
         private bool _synchronizeSourcePose = true;
 
@@ -36,9 +36,6 @@ namespace Landoria.SagaCapture
             _camera.fieldOfView = Preference.SagaCameraFOV;
             _camera.depth = sourceCamera.depth + 1f;
             _camera.enabled = false;
-            GameObject visualObject = new GameObject("SagaCaptureDroneVisual");
-            _visual = visualObject.AddComponent<SagaCaptureDroneVisual>();
-            _visual.Initialize(_camera, sourceCamera);
             _effects.Initialize(sourceCamera, cameraObject);
             SynchronizePose();
             SagaCaptureCameraLogger.LogSnapshot(
@@ -72,21 +69,27 @@ namespace Landoria.SagaCapture
                     "The local player is unavailable.");
             }
             var adapter = new ValheimDroneAdapter();
+            _previewFlight = preview;
             _pilot = new DronePilotController(
                 _camera, player.gameObject, Preference.DroneConfigPath,
                 adapter.CreateWorld(), adapter.CreateProfiles(),
                 Vector3.up * 1.60f, Preference.CreateTelemetry(preview),
-                _visual.gameObject);
-            _visual.SetRadius(_pilot.CameraRadius);
+                droneVisual: new DroneVisualOptions
+                {
+                    ViewerCamera = _sourceCamera,
+                    Visible = !preview && Preference.ShowDroneVisual,
+                    Color = Preference.ShellColor,
+                    LogInfo = message => SagaCapturePlugin.Log.LogInfo(message),
+                    LogWarning = message => SagaCapturePlugin.Log.LogWarning(message),
+                    LogError = message => SagaCapturePlugin.Log.LogError(message)
+                });
             _flightEnabled = true;
-            _visual.SetFlightActive(!preview);
         }
 
         // Stops autonomous flight without snapping back to the source pose.
         internal void PauseFlight()
         {
             _flightEnabled = false;
-            _visual?.SetFlightActive(false);
             _synchronizeSourcePose = false;
             _pilot?.Dispose();
             _pilot = null;
@@ -118,7 +121,6 @@ namespace Landoria.SagaCapture
                 return;
             }
             _camera.fieldOfView = Preference.SagaCameraFOV;
-            _visual?.Refresh();
             if (!_flightEnabled)
             {
                 if (_synchronizeSourcePose)
@@ -129,7 +131,8 @@ namespace Landoria.SagaCapture
             }
 
             _pilot?.Update(player.GetVelocity(), player.m_runSpeed);
-            _visual?.SetRadius(_pilot.CameraRadius);
+            _pilot?.SetVisual(!_previewFlight && Preference.ShowDroneVisual,
+                Preference.ShellColor);
         }
 
         // Restores listeners and destroys the secondary camera.
@@ -137,12 +140,6 @@ namespace Landoria.SagaCapture
         {
             _pilot?.Dispose();
             _pilot = null;
-            _visual?.Dispose();
-            if (_visual != null)
-            {
-                Destroy(_visual.gameObject);
-            }
-            _visual = null;
             EndOffscreenRendering();
             _mainCamera.Restore(_camera);
             if (_originalListener != null)
