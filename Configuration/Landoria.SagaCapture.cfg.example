@@ -13,14 +13,6 @@ CaptureModeShortcut = F8
 ## Enter or leave PreviewMode. No recording.
 PreviewModeShortcut = F8 + LeftShift
 
-[Recording]
-
-## Video quality: Low, Medium, or High.
-Quality = Low
-
-## Maximum video frame rate (30 to 60 FPS).
-MaximumFrameRate = 30
-
 [Telemetry]
 
 ## Session root directory passed to DronePilot.dll. Empty makes SagaCapture
@@ -28,42 +20,13 @@ MaximumFrameRate = 30
 ## creates Sessions/<session> subdirectories inside the supplied directory.
 RootDirectory =
 
-## Time between camera-position and orbit-motion samples, in seconds.
+## Time between camera-position and orbit-motion samples, in seconds (0.1 to 5).
 SampleIntervalSeconds = 0.5
 
-## Time between JSON files in one session, in seconds.
-FlushIntervalSeconds = 60
-
-## Orbit tangential speed below which direction is treated as stationary, in m/s.
-OrbitDirectionThreshold = 0.05
-
 ## Collect flight diagnostics while PreviewMode controls the camera.
+## Enabling diagnostics can noticeably slow down the game.
 PreviewEnabled = true
 
 ## Collect flight diagnostics while CaptureMode controls the camera.
+## Enabling diagnostics can noticeably slow down the game.
 CaptureEnabled = false
-
-[PilotProfile.OpenArea]
-
-## Maximum drone height above the terrain, in meters.
-MaximumHeight = 8
-
-## Maximum orbit radius around the target, in meters.
-MaximumOrbitRadius = 8
-
-[PilotProfile.Forest]
-
-## Count Valheim trees around the drone inside this radius, in meters.
-TreeScanRadius = 10
-
-## Time between Valheim tree-density scans, in seconds.
-TreeScanIntervalSeconds = 0.5
-
-## Number of distinct trees required to select the Forest profile.
-MinimumTreeCount = 2
-
-## Maximum drone height above the terrain, in meters.
-MaximumHeight = 4
-
-## Maximum orbit radius around the target, in meters.
-MaximumOrbitRadius = 3

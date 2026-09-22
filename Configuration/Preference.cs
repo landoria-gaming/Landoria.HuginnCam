@@ -13,9 +13,6 @@ namespace Landoria.SagaCapture
     {
         private static ConfigEntry<KeyboardShortcut> captureModeShortcut;
         private static ConfigEntry<KeyboardShortcut> previewModeShortcut;
-        private static ConfigEntry<UnityRuntimeCameraRecorder.RecordingQualityPreset>
-            recordingQuality;
-        private static ConfigEntry<int> maximumFrameRate;
         private static ConfigEntry<float> sagaCameraFov;
         private static ConfigEntry<bool> showDroneVisual;
         private static ConfigEntry<DroneShellColor> droneColor;
@@ -23,33 +20,27 @@ namespace Landoria.SagaCapture
         private static ConfigEntry<bool> captureTelemetry;
         private static ConfigEntry<string> telemetryRoot;
         private static ConfigEntry<float> sampleInterval;
-        private static ConfigEntry<float> flushInterval;
-        private static ConfigEntry<float> directionThreshold;
-        private static ConfigEntry<float> openMaximumHeight;
-        private static ConfigEntry<float> openMaximumRadius;
-        private static ConfigEntry<float> forestMaximumHeight;
-        private static ConfigEntry<float> forestMaximumRadius;
-        private static ConfigEntry<float> treeScanRadius;
-        private static ConfigEntry<float> treeScanInterval;
-        private static ConfigEntry<int> minimumTreeCount;
+
+        internal const UnityRuntimeCameraRecorder.RecordingQualityPreset
+            RecordingQuality = UnityRuntimeCameraRecorder.RecordingQualityPreset.Low;
+        internal const int MaximumFrameRate = 60;
+        internal const float OpenMaximumHeight = 8f;
+        internal const float OpenMaximumOrbitRadius = 8f;
+        internal const float ForestMaximumHeight = 4f;
+        internal const float ForestMaximumOrbitRadius = 3f;
+        internal const float TreeScanRadius = 10f;
+        internal const float TreeScanIntervalSeconds = 0.5f;
+        internal const int MinimumTreeCount = 2;
+        internal const float FlushIntervalSeconds = 60f;
+        internal const float OrbitDirectionThreshold = 0.05f;
 
         internal static KeyboardShortcut CaptureModeShortcut =>
             captureModeShortcut.Value;
         internal static KeyboardShortcut PreviewModeShortcut =>
             previewModeShortcut.Value;
-        internal static UnityRuntimeCameraRecorder.RecordingQualityPreset RecordingQuality =>
-            recordingQuality.Value;
-        internal static int MaximumFrameRate => maximumFrameRate.Value;
         internal static float SagaCameraFOV => sagaCameraFov.Value;
         internal static bool ShowDroneVisual => showDroneVisual.Value;
         internal static DroneShellColor ShellColor => droneColor.Value;
-        internal static float OpenMaximumHeight => openMaximumHeight.Value;
-        internal static float OpenMaximumOrbitRadius => openMaximumRadius.Value;
-        internal static float ForestMaximumHeight => forestMaximumHeight.Value;
-        internal static float ForestMaximumOrbitRadius => forestMaximumRadius.Value;
-        internal static float TreeScanRadius => treeScanRadius.Value;
-        internal static float TreeScanIntervalSeconds => treeScanInterval.Value;
-        internal static int MinimumTreeCount => minimumTreeCount.Value;
         internal static string DroneConfigPath => GetDroneConfigPath();
 
         // Preserves existing flight settings when adopting the shorter name.
@@ -77,14 +68,15 @@ namespace Landoria.SagaCapture
                     ? Path.Combine(Paths.ConfigPath, "SagaCapture")
                     : telemetryRoot.Value,
                 SampleIntervalSeconds = sampleInterval.Value,
-                FlushIntervalSeconds = flushInterval.Value,
-                OrbitDirectionThreshold = directionThreshold.Value
+                FlushIntervalSeconds = FlushIntervalSeconds,
+                OrbitDirectionThreshold = OrbitDirectionThreshold
             };
         }
 
-        // Creates the saved shortcut configuration entries.
+        // Creates the user-facing configuration entries.
         internal static void Initialize(ConfigFile config)
         {
+            RemoveLegacyConstants(config);
             captureModeShortcut = config.Bind(
                 "Controls",
                 "CaptureModeShortcut",
@@ -97,18 +89,6 @@ namespace Landoria.SagaCapture
                 new KeyboardShortcut(KeyCode.F8, KeyCode.LeftShift),
                 "Shortcut used to enter or leave PreviewMode.\n" +
                 "\nhttps://docs.unity3d.com/ScriptReference/KeyCode.html");
-            recordingQuality = config.Bind(
-                "Recording",
-                "Quality",
-                UnityRuntimeCameraRecorder.RecordingQualityPreset.Low,
-                "Video recording quality: Low, Medium, or High.");
-            maximumFrameRate = config.Bind(
-                "Recording",
-                "MaximumFrameRate",
-                30,
-                new ConfigDescription(
-                    "Maximum recording frame rate, from 30 to 60 FPS.",
-                    new AcceptableValueRange<int>(30, 60)));
             sagaCameraFov = config.Bind(
                 "Camera",
                 "SagaCameraFOV",
@@ -123,31 +103,53 @@ namespace Landoria.SagaCapture
                 "Camera", "DroneColor", DroneShellColor.Metal,
                 "Drone shell appearance: Metal (Valheim iron texture) or Yellow (the original solid color).");
             previewTelemetry = config.Bind("Telemetry", "PreviewEnabled",
-                true, "Collect drone diagnostics in PreviewMode.");
+                true, "Collect drone diagnostics in PreviewMode. " +
+                "Enabling diagnostics can noticeably slow down the game.");
             captureTelemetry = config.Bind("Telemetry", "CaptureEnabled",
-                false, "Collect drone diagnostics in CaptureMode.");
+                false, "Collect drone diagnostics in CaptureMode. " +
+                "Enabling diagnostics can noticeably slow down the game.");
             telemetryRoot = config.Bind("Telemetry", "RootDirectory", "",
                 "Empty uses BepInEx/config/SagaCapture; DronePilot creates Sessions inside it.");
             sampleInterval = config.Bind("Telemetry", "SampleIntervalSeconds",
-                0.5f, "Seconds between flight samples.");
-            flushInterval = config.Bind("Telemetry", "FlushIntervalSeconds",
-                60f, "Seconds between JSON diagnostic files.");
-            directionThreshold = config.Bind("Telemetry", "OrbitDirectionThreshold",
-                0.05f, "Orbit speed threshold in m/s for stationary direction.");
-            openMaximumHeight = config.Bind("PilotProfile.OpenArea", "MaximumHeight",
-                8f, "Maximum drone height over terrain, in meters.");
-            openMaximumRadius = config.Bind("PilotProfile.OpenArea", "MaximumOrbitRadius",
-                8f, "Maximum orbit radius, in meters.");
-            forestMaximumHeight = config.Bind("PilotProfile.Forest", "MaximumHeight",
-                4f, "Maximum drone height over terrain, in meters.");
-            forestMaximumRadius = config.Bind("PilotProfile.Forest", "MaximumOrbitRadius",
-                3f, "Maximum orbit radius, in meters.");
-            treeScanRadius = config.Bind("PilotProfile.Forest", "TreeScanRadius",
-                10f, "Tree density scan radius, in meters.");
-            treeScanInterval = config.Bind("PilotProfile.Forest", "TreeScanIntervalSeconds",
-                0.5f, "Seconds between tree density scans.");
-            minimumTreeCount = config.Bind("PilotProfile.Forest", "MinimumTreeCount",
-                2, "Distinct Valheim trees required to select Forest.");
+                0.5f, new ConfigDescription(
+                    "Seconds between flight samples, from 0.1 to 5.",
+                    new AcceptableValueRange<float>(0.1f, 5f)));
+        }
+
+        // Removes settings that became implementation constants from existing files.
+        private static void RemoveLegacyConstants(ConfigFile config)
+        {
+            bool saveOnConfigSet = config.SaveOnConfigSet;
+            config.SaveOnConfigSet = false;
+            try
+            {
+                RemoveLegacy(config, "Recording", "Quality",
+                    UnityRuntimeCameraRecorder.RecordingQualityPreset.Low);
+                RemoveLegacy(config, "Recording", "MaximumFrameRate", 60);
+                RemoveLegacy(config, "PilotProfile.OpenArea", "MaximumHeight", 8f);
+                RemoveLegacy(config, "PilotProfile.OpenArea", "MaximumOrbitRadius", 8f);
+                RemoveLegacy(config, "PilotProfile.Forest", "MaximumHeight", 4f);
+                RemoveLegacy(config, "PilotProfile.Forest", "MaximumOrbitRadius", 3f);
+                RemoveLegacy(config, "PilotProfile.Forest", "TreeScanRadius", 10f);
+                RemoveLegacy(config, "PilotProfile.Forest",
+                    "TreeScanIntervalSeconds", 0.5f);
+                RemoveLegacy(config, "PilotProfile.Forest", "MinimumTreeCount", 2);
+                RemoveLegacy(config, "Telemetry", "FlushIntervalSeconds", 60f);
+                RemoveLegacy(config, "Telemetry", "OrbitDirectionThreshold", 0.05f);
+            }
+            finally
+            {
+                config.SaveOnConfigSet = saveOnConfigSet;
+            }
+            config.Save();
+        }
+
+        // Removes one former setting from the configuration file.
+        private static void RemoveLegacy<T>(ConfigFile config, string section,
+            string key, T defaultValue)
+        {
+            config.Bind(section, key, defaultValue);
+            config.Remove(new ConfigDefinition(section, key));
         }
 
         // Restores the default shortcuts and recreates the configuration file.
@@ -156,9 +158,6 @@ namespace Landoria.SagaCapture
             captureModeShortcut.Value = new KeyboardShortcut(KeyCode.F8);
             previewModeShortcut.Value = new KeyboardShortcut(
                 KeyCode.F8, KeyCode.LeftShift);
-            recordingQuality.Value =
-                UnityRuntimeCameraRecorder.RecordingQualityPreset.Low;
-            maximumFrameRate.Value = 30;
             sagaCameraFov.Value = 65f;
             showDroneVisual.Value = true;
             droneColor.Value = DroneShellColor.Metal;
@@ -166,15 +165,6 @@ namespace Landoria.SagaCapture
             captureTelemetry.Value = false;
             telemetryRoot.Value = "";
             sampleInterval.Value = 0.5f;
-            flushInterval.Value = 60f;
-            directionThreshold.Value = 0.05f;
-            openMaximumHeight.Value = 8f;
-            openMaximumRadius.Value = 8f;
-            forestMaximumHeight.Value = 4f;
-            forestMaximumRadius.Value = 3f;
-            treeScanRadius.Value = 10f;
-            treeScanInterval.Value = 0.5f;
-            minimumTreeCount.Value = 2;
             config.Save();
             Landoria.Shared.ConfigWatcher.IgnoreCurrentFileVersion();
         }
