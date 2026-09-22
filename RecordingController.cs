@@ -120,8 +120,7 @@ namespace Landoria.SagaCapture
         {
             GraphicsSettingsState graphicsSettings =
                 GetCaptureGraphicsSettings();
-            GetRecordingResolution(out int outputWidth, out int outputHeight);
-            GetRenderResolution(graphicsSettings, outputWidth, outputHeight,
+            GetRenderResolution(graphicsSettings,
                 out int renderWidth, out int renderHeight,
                 out FilterMode filterMode);
             _cameraRig = gameObject.AddComponent<SagaCaptureRig>();
@@ -144,47 +143,29 @@ namespace Landoria.SagaCapture
         }
 
         // Creates the encoder and output configuration.
-        private static UnityRuntimeCameraRecorder.RecordingSettings CreateSettings(
+        private UnityRuntimeCameraRecorder.RecordingSettings CreateSettings(
             string outputPath)
         {
-            GetRecordingResolution(out int width, out int height);
+            RenderTexture cameraTarget = _cameraRig.Camera.targetTexture;
             return new UnityRuntimeCameraRecorder.RecordingSettings
             {
                 FfmpegPath = ResolveFfmpegDirectory(),
                 TemporaryContainerPath = outputPath + ".mkv.tmp",
                 OutputPath = outputPath,
-                Width = width,
-                Height = height,
-                MaximumFrameRate = Preference.MaximumFrameRate,
+                Width = cameraTarget.width,
+                Height = cameraTarget.height,
+                MaximumFrameRate = Preference.CameraMaximumFrameRate,
                 SourceAntiAliasingSamples = AntiAliasingSamples,
                 QualityPreset = Preference.RecordingQuality
             };
         }
 
-        // Resolves the configured output dimensions.
-        private static void GetRecordingResolution(out int width, out int height)
-        {
-            height = Preference.RecordingResolution switch
-            {
-                RecordingResolutionPreset.HD720 => 720,
-                RecordingResolutionPreset.FullHD1080 => 1080,
-                RecordingResolutionPreset.QHD1440 => 1440,
-                RecordingResolutionPreset.UHD2160 => 2160,
-                _ => Math.Max(2, Screen.height & ~1)
-            };
-            width = Preference.RecordingResolution ==
-                    RecordingResolutionPreset.SameAsGame
-                ? Math.Max(2, Screen.width & ~1)
-                : height * 16 / 9;
-        }
-
         // Resolves the active Valheim 3D rendering resolution and filter.
         private static void GetRenderResolution(GraphicsSettingsState settings,
-            int outputWidth, int outputHeight,
             out int width, out int height, out FilterMode filterMode)
         {
             GetConfiguredRenderResolution(settings.m_target3DResolutionVertical,
-                outputWidth, outputHeight, out width, out height);
+                out width, out height);
             filterMode = settings.m_upscalingAlgorithm ==
                          UpscalingAlgorithm.NearestNeighbor
                 ? FilterMode.Point
@@ -193,7 +174,7 @@ namespace Landoria.SagaCapture
 
         // Resolves the configured camera-rendering height.
         private static void GetConfiguredRenderResolution(int presetHeight,
-            int outputWidth, int outputHeight, out int width, out int height)
+            out int width, out int height)
         {
             switch (Preference.CameraRenderResolution)
             {
@@ -229,7 +210,7 @@ namespace Landoria.SagaCapture
                 presetHeight = Screen.height;
             }
             height = Math.Max(2, presetHeight & ~1);
-            width = Math.Max(2, (height * outputWidth / outputHeight) & ~1);
+            width = Math.Max(2, (height * Screen.width / Screen.height) & ~1);
         }
 
         // Builds the graphics state selected for the capture camera.

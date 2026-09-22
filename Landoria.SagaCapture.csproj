@@ -63,7 +63,6 @@
     <Compile Include="Configuration\CameraRenderResolutionPreset.cs" />
     <Compile Include="Configuration\CameraEffectOverride.cs" />
     <Compile Include="Configuration\Preference.cs" />
-    <Compile Include="Configuration\RecordingResolutionPreset.cs" />
     <Compile Include="SagaCapturePlugin.cs" />
     <Compile Include="Camera\SagaCaptureAudioListener.cs" />
     <Compile Include="Camera\SagaCaptureCameraLogger.cs" />

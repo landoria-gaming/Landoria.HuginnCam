@@ -16,11 +16,10 @@ namespace Landoria.SagaCapture
         private static ConfigEntry<KeyboardShortcut> previewModeShortcut;
         private static ConfigEntry<UnityRuntimeCameraRecorder.RecordingQualityPreset>
             recordingQuality;
-        private static ConfigEntry<int> maximumFrameRate;
-        private static ConfigEntry<RecordingResolutionPreset> recordingResolution;
         private static ConfigEntry<CaptureGraphicsPreset> captureGraphicsPreset;
         private static ConfigEntry<CameraRenderResolutionPreset>
             cameraRenderResolution;
+        private static ConfigEntry<int> cameraMaximumFrameRate;
         private static ConfigEntry<CameraEffectOverride> depthOfFieldOverride;
         private static ConfigEntry<CameraEffectOverride> motionBlurOverride;
         private static ConfigEntry<CameraEffectOverride> bloomOverride;
@@ -47,13 +46,12 @@ namespace Landoria.SagaCapture
             previewModeShortcut.Value;
         internal static UnityRuntimeCameraRecorder.RecordingQualityPreset
             RecordingQuality => recordingQuality.Value;
-        internal static int MaximumFrameRate => maximumFrameRate.Value;
-        internal static RecordingResolutionPreset RecordingResolution =>
-            recordingResolution.Value;
         internal static CaptureGraphicsPreset RecordingGraphicsPreset =>
             captureGraphicsPreset.Value;
         internal static CameraRenderResolutionPreset CameraRenderResolution =>
             cameraRenderResolution.Value;
+        internal static int CameraMaximumFrameRate =>
+            cameraMaximumFrameRate.Value;
         internal static bool ShowDroneVisual => showDroneVisual.Value;
         internal static DroneShellColor ShellColor => droneColor.Value;
         internal static string DroneConfigPath => GetDroneConfigPath();
@@ -142,17 +140,6 @@ namespace Landoria.SagaCapture
                 "VideoEncoding", "Quality",
                 UnityRuntimeCameraRecorder.RecordingQualityPreset.Low,
                 "Encoder quality preset for the output video: Low, Medium, or High.");
-            maximumFrameRate = config.Bind(
-                "VideoEncoding", "MaximumFrameRate", 60,
-                new ConfigDescription(
-                    "Maximum frame rate written to the output video, from 30 to 60 FPS.",
-                    new AcceptableValueRange<int>(30, 60)));
-            recordingResolution = config.Bind(
-                "VideoEncoding", "Resolution",
-                RecordingResolutionPreset.SameAsGame,
-                "Output video resolution: SameAsGame, " +
-                "HD720 (1280x720), FullHD1080 (1920x1080), " +
-                "QHD1440 (2560x1440), or UHD2160 (3840x2160).");
             captureGraphicsPreset = config.Bind(
                 "CameraRendering", "GraphicsPreset",
                 CaptureGraphicsPreset.SameAsGame,
@@ -166,6 +153,11 @@ namespace Landoria.SagaCapture
                 "HD720 (1280x720), " +
                 "FullHD1080 (1920x1080), QHD1440 (2560x1440), " +
                 "or UHD2160 (3840x2160).");
+            cameraMaximumFrameRate = config.Bind(
+                "CameraRendering", "MaximumFrameRate", 60,
+                new ConfigDescription(
+                    "Maximum drone-camera rendering frame rate: 30 or 60 FPS.",
+                    new AcceptableValueList<int>(30, 60)));
             depthOfFieldOverride = BindEffectOverride(
                 config, "DepthOfField", "depth of field");
             motionBlurOverride = BindEffectOverride(
@@ -226,15 +218,18 @@ namespace Landoria.SagaCapture
                     UnityRuntimeCameraRecorder.RecordingQualityPreset.Low);
                 RemoveLegacy(config, "Recording", "MaximumFrameRate", 60);
                 RemoveLegacy(config, "Recording", "Resolution",
-                    RecordingResolutionPreset.SameAsGame);
+                    "SameAsGame");
                 RemoveLegacy(config, "Recording", "GraphicsPreset",
                     CaptureGraphicsPreset.High);
                 RemoveLegacy(config, "Recording.VideoEncoding", "Quality",
                     UnityRuntimeCameraRecorder.RecordingQualityPreset.Low);
                 RemoveLegacy(config, "Recording.VideoEncoding",
                     "MaximumFrameRate", 60);
+                RemoveLegacy(config, "VideoEncoding", "MaximumFrameRate", 60);
                 RemoveLegacy(config, "Recording.VideoEncoding", "Resolution",
-                    RecordingResolutionPreset.SameAsGame);
+                    "SameAsGame");
+                RemoveLegacy(config, "VideoEncoding", "Resolution",
+                    "SameAsGame");
                 RemoveLegacy(config, "Recording.CameraRendering",
                     "GraphicsPreset", CaptureGraphicsPreset.High);
                 RemoveLegacy(config, "Recording.CameraRendering", "Resolution",
@@ -264,11 +259,10 @@ namespace Landoria.SagaCapture
                 KeyCode.F8, KeyCode.LeftShift);
             recordingQuality.Value =
                 UnityRuntimeCameraRecorder.RecordingQualityPreset.Low;
-            maximumFrameRate.Value = 60;
-            recordingResolution.Value = RecordingResolutionPreset.SameAsGame;
             captureGraphicsPreset.Value = CaptureGraphicsPreset.SameAsGame;
             cameraRenderResolution.Value =
                 CameraRenderResolutionPreset.SameAsGame;
+            cameraMaximumFrameRate.Value = 60;
             depthOfFieldOverride.Value = CameraEffectOverride.Preset;
             motionBlurOverride.Value = CameraEffectOverride.Preset;
             bloomOverride.Value = CameraEffectOverride.Preset;

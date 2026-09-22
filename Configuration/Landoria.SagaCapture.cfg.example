@@ -22,6 +22,9 @@ GraphicsPreset = SameAsGame
 ## or UHD2160 (3840x2160).
 Resolution = SameAsGame
 
+## Maximum drone-camera rendering frame rate: 30 or 60 FPS.
+MaximumFrameRate = 60
+
 ## Override camera depth of field: Preset, Enabled, or Disabled.
 DepthOfField = Preset
 
@@ -35,13 +38,6 @@ Bloom = Preset
 
 ## Encoder quality preset for the output video: Low, Medium, or High.
 Quality = Low
-
-## Maximum frame rate written to the output video (30 to 60 FPS).
-MaximumFrameRate = 60
-
-## Output video resolution: SameAsGame, HD720 (1280x720),
-## FullHD1080 (1920x1080), QHD1440 (2560x1440), or UHD2160 (3840x2160).
-Resolution = SameAsGame
 
 [Telemetry]
 
