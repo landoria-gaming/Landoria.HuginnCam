@@ -61,8 +61,8 @@
   <ItemGroup>
     <Compile Include="Configuration\ConfigWatcher.cs" />
     <Compile Include="Configuration\CaptureGraphicsPreset.cs" />
+    <Compile Include="Configuration\OutputContent.cs" />
     <Compile Include="Configuration\CameraRenderResolutionPreset.cs" />
-    <Compile Include="Configuration\CameraEffectOverride.cs" />
     <Compile Include="Configuration\Preference.cs" />
     <Compile Include="SagaCapturePlugin.cs" />
     <Compile Include="Camera\SagaCaptureAudioListener.cs" />
@@ -81,6 +81,7 @@
     <Compile Include="Camera\SagaCaptureReturnTransition.cs" />
     <Compile Include="ValheimDroneAdapter.cs" />
     <Compile Include="RecordingController.cs" />
+    <Compile Include="InterruptedRecordingRecovery.cs" />
     <Compile Include="Patches\SagaCaptureMenuPatch.cs" />
     <Compile Include="Patches\SagaCapturePlayerVisibilityPatch.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

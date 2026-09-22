@@ -12,6 +12,8 @@ namespace Landoria.SagaCapture
         private const int AntiAliasingSamples = 1;
         private const int MinimumWarmupFrames = 8;
         private const float MinimumWarmupSeconds = 0.5f;
+        private const float MinimumShotDurationSeconds = 5f;
+        private const float MaximumShotDurationSeconds = 10f;
         private SagaCaptureRig _cameraRig;
         private Recorder _recorder;
         private Coroutine _warmupRoutine;
@@ -137,15 +139,33 @@ namespace Landoria.SagaCapture
                 graphicsSettings);
         }
 
-        // Creates a sequence containing the secondary camera.
+        // Creates the configured drone-only or alternating camera sequence.
         private UnityRuntimeCameraRecorder.VideoSequenceSettings CreateSequence()
         {
+            var drone = UnityRuntimeCameraRecorder.VideoSequenceSource
+                .FromCamera(_cameraRig.Camera);
+            if (Preference.Content == OutputContent.DroneOnly)
+            {
+                return new UnityRuntimeCameraRecorder.VideoSequenceSettings
+                {
+                    Sources = new[] { drone }
+                };
+            }
+
             return new UnityRuntimeCameraRecorder.VideoSequenceSettings
             {
                 Sources = new[]
                 {
-                    UnityRuntimeCameraRecorder.VideoSequenceSource.FromCamera(
-                        _cameraRig.Camera)
+                    drone,
+                    UnityRuntimeCameraRecorder.VideoSequenceSource
+                        .FromScreen(false)
+                },
+                Order = UnityRuntimeCameraRecorder.VideoSequenceOrder.Sequential,
+                MinimumShotDurationSeconds = MinimumShotDurationSeconds,
+                MaximumShotDurationSeconds = MaximumShotDurationSeconds,
+                Transitions = new[]
+                {
+                    UnityRuntimeCameraRecorder.VideoSequenceTransition.NoTransition
                 }
             };
         }
@@ -169,7 +189,7 @@ namespace Landoria.SagaCapture
         }
 
         // Resolves the FFmpeg directory used by the recorder.
-        private static string ResolveFfmpegDirectory()
+        internal static string ResolveFfmpegDirectory()
         {
             string directory = Environment.GetEnvironmentVariable("FFMPEG_PATH");
             if (string.IsNullOrWhiteSpace(directory) ||

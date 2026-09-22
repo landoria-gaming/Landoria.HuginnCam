@@ -17,7 +17,6 @@ namespace Landoria.SagaCapture
             {
                 ApplyPreset(manager, ref state);
             }
-            Preference.ApplyCameraEffectOverrides(ref state, gameSettings);
             return state;
         }
 

@@ -1,0 +1,59 @@
+## Example BepInEx settings for the Valheim SagaCapture plugin.
+
+[Controls]
+
+## Shortcut used to enter or leave CaptureMode.
+## https://docs.unity3d.com/ScriptReference/KeyCode.html
+CaptureModeShortcut = F8
+
+## Shortcut used to enter or leave PreviewMode. No recording.
+## https://docs.unity3d.com/ScriptReference/KeyCode.html
+PreviewModeShortcut = F8 + LeftShift
+
+[DroneCameraRendering]
+
+## Valheim graphics preset used to render the drone camera before video encoding:
+## SameAsGame, VeryLow, Low, Medium, or High.
+GraphicsPreset = SameAsGame
+
+## Internal drone-camera resolution: SameAsGame, Preset (graphics preset value),
+## HD720 (1280x720), FullHD1080 (1920x1080), QHD1440 (2560x1440),
+## or UHD2160 (3840x2160).
+Resolution = SameAsGame
+
+## Frame rate shared by PreviewMode, CaptureMode, the Unity game loop,
+## and the video recorder: 30 or 60 FPS. VSync is temporarily disabled
+## so Unity does not render more frames than the recorder accepts.
+MaximumFrameRate = 60
+
+## Drone-camera vertical field of view: SameAsGame or 40 to 120 degrees.
+DroneCameraFOV = SameAsGame
+
+[Output]
+
+## Video content: DroneOnly or DroneAndGameplay.
+## DroneAndGameplay alternates between both views every 5 to 10 seconds
+## without a transition.
+Content = DroneOnly
+
+[Drone]
+
+## Show the camera-sized glowing drone to the player in CaptureMode.
+## It has no shadow and is hidden from the recording.
+ShowDroneVisual = false
+
+## Drone shell appearance: Yellow (default) or Metal (Valheim iron texture).
+DroneColor = Yellow
+
+[Telemetry]
+
+## Collect flight diagnostics while PreviewMode controls the camera.
+## Enabling diagnostics can noticeably slow down the game.
+PreviewEnabled = false
+
+## Collect flight diagnostics while CaptureMode controls the camera.
+## Enabling diagnostics can noticeably slow down the game.
+CaptureEnabled = false
+
+## Time between camera-position and orbit-motion samples, in seconds (0.1 to 5).
+SampleIntervalSeconds = 0.5

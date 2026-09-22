@@ -34,7 +34,7 @@ namespace Landoria.SagaCapture
             cameraObject.transform.SetParent(transform, false);
             _camera = cameraObject.AddComponent<Camera>();
             _camera.CopyFrom(sourceCamera);
-            _camera.fieldOfView = Preference.GetSagaCameraFov(sourceCamera);
+            _camera.fieldOfView = Preference.GetDroneCameraFov(sourceCamera);
             _camera.depth = sourceCamera.depth + 1f;
             _camera.enabled = false;
             _effects.Initialize(sourceCamera, cameraObject, captureSettings);
@@ -128,7 +128,7 @@ namespace Landoria.SagaCapture
             {
                 return;
             }
-            _camera.fieldOfView = Preference.GetSagaCameraFov(_sourceCamera);
+            _camera.fieldOfView = Preference.GetDroneCameraFov(_sourceCamera);
             if (!_flightEnabled)
             {
                 if (_synchronizeSourcePose)

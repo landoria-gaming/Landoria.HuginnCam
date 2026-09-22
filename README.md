@@ -12,7 +12,7 @@ SagaCapture records Valheim gameplay from a configurable secondary camera.
 - Save MP4 recordings to the Windows `My Videos` directory.
 - Reload the BepInEx configuration when it changes on disk.
 - Configure recording quality and a frame-rate limit from 30 to 60 FPS.
-- Configure `SagaCameraFOV` from 40 to 120 degrees; its default is 65.
+- Configure `DroneCameraFOV` as `SameAsGame` or from 40 to 120 degrees.
 
 The secondary camera is flown by the independent
 [DronePilot](https://github.com/UnityRuntimeCameraRecorder/DronePilot) library.
@@ -42,8 +42,8 @@ external; the native `Direct3DVideoEncoder.dll` stays beside the plugin.
 
 DronePilot owns the visible model and embeds its Unity AssetBundle. SagaCapture
 passes the gameplay camera for viewing and selects visibility and color.
-Set `Camera.DroneColor` to `Metal` (default) or `Yellow` for the original solid
-shell color. Configuration reloads update the visual without recreating it.
+Set `Drone.DroneColor` to `Yellow` (default) or `Metal` for the Valheim iron
+texture. Configuration reloads update the visual without recreating it.
 The Unity build project lives in `../SagaCapture.ModelBuild`; it updates
 `../DronePilot/assets/drone` before the .NET build.
 

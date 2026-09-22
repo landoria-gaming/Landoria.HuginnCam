@@ -14,16 +14,12 @@ namespace Landoria.SagaCapture
     {
         private static ConfigEntry<KeyboardShortcut> captureModeShortcut;
         private static ConfigEntry<KeyboardShortcut> previewModeShortcut;
-        private static ConfigEntry<UnityRuntimeCameraRecorder.RecordingQualityPreset>
-            recordingQuality;
         private static ConfigEntry<CaptureGraphicsPreset> captureGraphicsPreset;
         private static ConfigEntry<CameraRenderResolutionPreset>
             cameraRenderResolution;
         private static ConfigEntry<int> cameraMaximumFrameRate;
-        private static ConfigEntry<CameraEffectOverride> depthOfFieldOverride;
-        private static ConfigEntry<CameraEffectOverride> motionBlurOverride;
-        private static ConfigEntry<CameraEffectOverride> bloomOverride;
-        private static ConfigEntry<string> sagaCameraFov;
+        private static ConfigEntry<string> droneCameraFov;
+        private static ConfigEntry<OutputContent> outputContent;
         private static ConfigEntry<bool> showDroneVisual;
         private static ConfigEntry<DroneShellColor> droneColor;
         private static ConfigEntry<bool> previewTelemetry;
@@ -44,8 +40,9 @@ namespace Landoria.SagaCapture
             captureModeShortcut.Value;
         internal static KeyboardShortcut PreviewModeShortcut =>
             previewModeShortcut.Value;
-        internal static UnityRuntimeCameraRecorder.RecordingQualityPreset
-            RecordingQuality => recordingQuality.Value;
+        internal const UnityRuntimeCameraRecorder.RecordingQualityPreset
+            RecordingQuality =
+                UnityRuntimeCameraRecorder.RecordingQualityPreset.Low;
         internal static CaptureGraphicsPreset RecordingGraphicsPreset =>
             captureGraphicsPreset.Value;
         internal static CameraRenderResolutionPreset CameraRenderResolution =>
@@ -54,50 +51,18 @@ namespace Landoria.SagaCapture
             cameraMaximumFrameRate.Value;
         internal static bool ShowDroneVisual => showDroneVisual.Value;
         internal static DroneShellColor ShellColor => droneColor.Value;
+        internal static OutputContent Content => outputContent.Value;
         internal static string DroneConfigPath => GetDroneConfigPath();
 
-        // Applies user overrides after resolving the camera graphics preset.
-        internal static void ApplyCameraEffectOverrides(
-            ref GraphicsSettingsState settings,
-            GraphicsSettingsState gameSettings)
-        {
-            settings.m_depthOfField = ResolveEffect(
-                depthOfFieldOverride.Value, settings.m_depthOfField,
-                gameSettings.m_depthOfField);
-            settings.m_motionBlur = ResolveEffect(
-                motionBlurOverride.Value, settings.m_motionBlur,
-                gameSettings.m_motionBlur);
-            settings.m_bloom = ResolveEffect(
-                bloomOverride.Value, settings.m_bloom,
-                gameSettings.m_bloom);
-        }
-
-        // Resolves one effect against its preset and effective game values.
-        private static bool ResolveEffect(CameraEffectOverride value,
-            bool presetValue, bool gameValue)
-        {
-            switch (value)
-            {
-                case CameraEffectOverride.SameAsGame:
-                    return gameValue;
-                case CameraEffectOverride.Enabled:
-                    return true;
-                case CameraEffectOverride.Disabled:
-                    return false;
-                default:
-                    return presetValue;
-            }
-        }
-
         // Resolves SameAsGame or a custom vertical field of view.
-        internal static float GetSagaCameraFov(Camera sourceCamera)
+        internal static float GetDroneCameraFov(Camera sourceCamera)
         {
-            if (string.Equals(sagaCameraFov.Value, "SameAsGame",
+            if (string.Equals(droneCameraFov.Value, "SameAsGame",
                 System.StringComparison.OrdinalIgnoreCase))
             {
                 return sourceCamera.fieldOfView;
             }
-            if (float.TryParse(sagaCameraFov.Value, NumberStyles.Float,
+            if (float.TryParse(droneCameraFov.Value, NumberStyles.Float,
                     CultureInfo.InvariantCulture, out float value))
             {
                 return Mathf.Clamp(value, 40f, 120f);
@@ -149,17 +114,13 @@ namespace Landoria.SagaCapture
                 new KeyboardShortcut(KeyCode.F8, KeyCode.LeftShift),
                 "Shortcut used to enter or leave PreviewMode.\n" +
                 "\nhttps://docs.unity3d.com/ScriptReference/KeyCode.html");
-            recordingQuality = config.Bind(
-                "VideoEncoding", "Quality",
-                UnityRuntimeCameraRecorder.RecordingQualityPreset.Low,
-                "Encoder quality preset for the output video: Low, Medium, or High.");
             captureGraphicsPreset = config.Bind(
-                "CameraRendering", "GraphicsPreset",
+                "DroneCameraRendering", "GraphicsPreset",
                 CaptureGraphicsPreset.SameAsGame,
                 "Valheim graphics preset used to render the drone camera before " +
                 "video encoding: SameAsGame, VeryLow, Low, Medium, or High.");
             cameraRenderResolution = config.Bind(
-                "CameraRendering", "Resolution",
+                "DroneCameraRendering", "Resolution",
                 CameraRenderResolutionPreset.SameAsGame,
                 "Internal drone-camera resolution: SameAsGame, " +
                 "Preset (graphics preset value), " +
@@ -167,32 +128,31 @@ namespace Landoria.SagaCapture
                 "FullHD1080 (1920x1080), QHD1440 (2560x1440), " +
                 "or UHD2160 (3840x2160).");
             cameraMaximumFrameRate = config.Bind(
-                "CameraRendering", "MaximumFrameRate", 60,
+                "DroneCameraRendering", "MaximumFrameRate", 60,
                 new ConfigDescription(
                     "Frame rate shared by PreviewMode, CaptureMode, the " +
                     "Unity game loop, and the video recorder: 30 or 60 FPS. " +
                     "VSync is temporarily disabled so Unity does not render " +
                     "more frames than the recorder accepts.",
                     new AcceptableValueList<int>(30, 60)));
-            depthOfFieldOverride = BindEffectOverride(
-                config, "DepthOfField", "depth of field");
-            motionBlurOverride = BindEffectOverride(
-                config, "MotionBlur", "motion blur");
-            bloomOverride = BindEffectOverride(
-                config, "Bloom", "bloom");
-            sagaCameraFov = config.Bind(
-                "CameraRendering",
-                "SagaCameraFOV",
+            droneCameraFov = config.Bind(
+                "DroneCameraRendering",
+                "DroneCameraFOV",
                 "SameAsGame",
                 "Drone-camera vertical field of view: SameAsGame or a number from 40 to 120 degrees.");
+            outputContent = config.Bind(
+                "Output", "Content", OutputContent.DroneOnly,
+                "Video content: DroneOnly or DroneAndGameplay. " +
+                "DroneAndGameplay alternates between both views every " +
+                "5 to 10 seconds without a transition.");
             showDroneVisual = config.Bind(
-                "Camera", "ShowDroneVisual", true,
+                "Drone", "ShowDroneVisual", false,
                 "Show the camera-sized glowing drone to the player in CaptureMode. It has no shadow and is hidden from the recording.");
             droneColor = config.Bind(
-                "Camera", "DroneColor", DroneShellColor.Metal,
+                "Drone", "DroneColor", DroneShellColor.Yellow,
                 "Drone shell appearance: Metal (Valheim iron texture) or Yellow (the original solid color).");
             previewTelemetry = config.Bind("Telemetry", "PreviewEnabled",
-                true, "Collect drone diagnostics in PreviewMode. " +
+                false, "Collect drone diagnostics in PreviewMode. " +
                 "Enabling diagnostics can noticeably slow down the game.");
             captureTelemetry = config.Bind("Telemetry", "CaptureEnabled",
                 false, "Collect drone diagnostics in CaptureMode. " +
@@ -201,16 +161,6 @@ namespace Landoria.SagaCapture
                 0.5f, new ConfigDescription(
                     "Seconds between flight samples, from 0.1 to 5.",
                     new AcceptableValueRange<float>(0.1f, 5f)));
-        }
-
-        // Creates one capture-camera effect override setting.
-        private static ConfigEntry<CameraEffectOverride> BindEffectOverride(
-            ConfigFile config, string key, string displayName)
-        {
-            return config.Bind("CameraRendering", key,
-                CameraEffectOverride.SameAsGame,
-                $"Override camera {displayName}: SameAsGame, Preset, " +
-                "Enabled, or Disabled.");
         }
 
         // Removes settings that became implementation constants from existing files.
@@ -240,6 +190,8 @@ namespace Landoria.SagaCapture
                     CaptureGraphicsPreset.High);
                 RemoveLegacy(config, "Recording.VideoEncoding", "Quality",
                     UnityRuntimeCameraRecorder.RecordingQualityPreset.Low);
+                RemoveLegacy(config, "VideoEncoding", "Quality",
+                    UnityRuntimeCameraRecorder.RecordingQualityPreset.Low);
                 RemoveLegacy(config, "Recording.VideoEncoding",
                     "MaximumFrameRate", 60);
                 RemoveLegacy(config, "VideoEncoding", "MaximumFrameRate", 60);
@@ -254,6 +206,25 @@ namespace Landoria.SagaCapture
                 RemoveLegacy(config, "Recording.CameraRendering", "Resolution",
                     CameraRenderResolutionPreset.Preset);
                 RemoveLegacy(config, "Camera", "SagaCameraFOV", 65f);
+                RemoveLegacy(config, "Camera", "ShowDroneVisual", false);
+                RemoveLegacy(config, "Camera", "DroneColor",
+                    DroneShellColor.Yellow);
+                RemoveLegacy(config, "CameraRendering", "DepthOfField",
+                    "SameAsGame");
+                RemoveLegacy(config, "CameraRendering", "MotionBlur",
+                    "SameAsGame");
+                RemoveLegacy(config, "CameraRendering", "Bloom",
+                    "SameAsGame");
+                RemoveLegacy(config, "CameraRendering", "GraphicsPreset",
+                    CaptureGraphicsPreset.SameAsGame);
+                RemoveLegacy(config, "CameraRendering", "Resolution",
+                    CameraRenderResolutionPreset.SameAsGame);
+                RemoveLegacy(config, "CameraRendering", "MaximumFrameRate",
+                    60);
+                RemoveLegacy(config, "CameraRendering", "SagaCameraFOV",
+                    "SameAsGame");
+                RemoveLegacy(config, "DroneCameraRendering", "SagaCameraFOV",
+                    "SameAsGame");
             }
             finally
             {
@@ -276,19 +247,15 @@ namespace Landoria.SagaCapture
             captureModeShortcut.Value = new KeyboardShortcut(KeyCode.F8);
             previewModeShortcut.Value = new KeyboardShortcut(
                 KeyCode.F8, KeyCode.LeftShift);
-            recordingQuality.Value =
-                UnityRuntimeCameraRecorder.RecordingQualityPreset.Low;
             captureGraphicsPreset.Value = CaptureGraphicsPreset.SameAsGame;
             cameraRenderResolution.Value =
                 CameraRenderResolutionPreset.SameAsGame;
             cameraMaximumFrameRate.Value = 60;
-            depthOfFieldOverride.Value = CameraEffectOverride.SameAsGame;
-            motionBlurOverride.Value = CameraEffectOverride.SameAsGame;
-            bloomOverride.Value = CameraEffectOverride.SameAsGame;
-            sagaCameraFov.Value = "SameAsGame";
-            showDroneVisual.Value = true;
-            droneColor.Value = DroneShellColor.Metal;
-            previewTelemetry.Value = true;
+            droneCameraFov.Value = "SameAsGame";
+            outputContent.Value = OutputContent.DroneOnly;
+            showDroneVisual.Value = false;
+            droneColor.Value = DroneShellColor.Yellow;
+            previewTelemetry.Value = false;
             captureTelemetry.Value = false;
             sampleInterval.Value = 0.5f;
             config.Save();

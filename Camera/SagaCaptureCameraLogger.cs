@@ -6,13 +6,13 @@ namespace Landoria.SagaCapture
     // Records camera state at creation and autonomous-flight startup.
     internal static class SagaCaptureCameraLogger
     {
-        // Logs the effective gameplay and Saga rendering configurations.
+        // Logs the effective gameplay and drone rendering configurations.
         internal static void LogEffectiveConfiguration(
-            string mode, Camera source, Camera sagaCamera,
+            string mode, Camera source, Camera droneCamera,
             GraphicsSettingsState sourceSettings,
-            GraphicsSettingsState sagaSettings)
+            GraphicsSettingsState droneSettings)
         {
-            if (source == null || sagaCamera == null)
+            if (source == null || droneCamera == null)
             {
                 return;
             }
@@ -21,7 +21,7 @@ namespace Landoria.SagaCapture
             LogCamera("Game", source, sourceSettings,
                 Application.targetFrameRate,
                 QualitySettings.vSyncCount > 0);
-            LogCamera("Saga", sagaCamera, sagaSettings,
+            LogCamera("Drone", droneCamera, droneSettings,
                 Preference.CameraMaximumFrameRate,
                 QualitySettings.vSyncCount > 0);
         }
@@ -81,36 +81,36 @@ namespace Landoria.SagaCapture
             height = camera.pixelHeight;
         }
 
-        // Logs source, Saga camera, and player-relative framing parameters.
+        // Logs source, drone camera, and player-relative framing parameters.
         internal static void LogSnapshot(
-            string phase, Camera source, Camera sagaCamera,
+            string phase, Camera source, Camera droneCamera,
             bool enabled)
         {
-            if (!enabled || source == null || sagaCamera == null)
+            if (!enabled || source == null || droneCamera == null)
             {
                 return;
             }
 
             Player player = Player.m_localPlayer;
             Vector3 relative = player != null
-                ? sagaCamera.transform.position - player.transform.position
+                ? droneCamera.transform.position - player.transform.position
                 : Vector3.zero;
             float horizontal = new Vector2(relative.x, relative.z).magnitude;
             SagaCapturePlugin.Log.LogInfo(string.Format(
                 CultureInfo.InvariantCulture,
                 "Camera {0}: source={1}, sourcePosition={2}, " +
-                "sourceRotation={3}, sourceFOV={4:F1}, sagaPosition={5}, " +
-                "sagaRotation={6}, sagaFOV={7:F1}, relative={8}, " +
+                "sourceRotation={3}, sourceFOV={4:F1}, dronePosition={5}, " +
+                "droneRotation={6}, droneFOV={7:F1}, relative={8}, " +
                 "horizontalDistance={9:F2}m, verticalOffset={10:F2}m, " +
                 "aspect={11:F3}, clip={12:F2}-{13:F1}m, pixels={14}x{15}.",
                 phase, source.name, Format(source.transform.position),
                 Format(source.transform.eulerAngles), source.fieldOfView,
-                Format(sagaCamera.transform.position),
-                Format(sagaCamera.transform.eulerAngles),
-                sagaCamera.fieldOfView, Format(relative), horizontal,
-                relative.y, sagaCamera.aspect, sagaCamera.nearClipPlane,
-                sagaCamera.farClipPlane, sagaCamera.pixelWidth,
-                sagaCamera.pixelHeight));
+                Format(droneCamera.transform.position),
+                Format(droneCamera.transform.eulerAngles),
+                droneCamera.fieldOfView, Format(relative), horizontal,
+                relative.y, droneCamera.aspect, droneCamera.nearClipPlane,
+                droneCamera.farClipPlane, droneCamera.pixelWidth,
+                droneCamera.pixelHeight));
         }
 
         // Formats vectors consistently regardless of the system locale.
