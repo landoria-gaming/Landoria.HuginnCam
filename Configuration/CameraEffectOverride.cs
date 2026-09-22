@@ -1,8 +1,9 @@
 namespace Landoria.SagaCapture
 {
-    // Selects whether one capture-camera effect inherits or overrides its preset.
+    // Selects how one capture-camera effect resolves its effective value.
     internal enum CameraEffectOverride
     {
+        SameAsGame,
         Preset,
         Enabled,
         Disabled

@@ -55,9 +55,8 @@ namespace Landoria.SagaCapture
         // Displays the secondary camera directly on the player's screen.
         internal void BeginPreview()
         {
-            EndOffscreenRendering();
-            _mainCamera.Take(_camera);
-            _camera.targetTexture = null;
+            _camera.gameObject.AddComponent<SagaCapturePreviewPresenter>()
+                .Initialize(_offscreenTarget);
             _camera.enabled = true;
             BeginFlight(true);
         }
@@ -65,6 +64,8 @@ namespace Landoria.SagaCapture
         // Allows autonomous movement after camera preparation is complete.
         internal void BeginFlight(bool preview = false)
         {
+            _mainCamera.Take(_camera);
+            _camera.gameObject.AddComponent<SagaCaptureFrameRateDisplay>();
             SynchronizePose();
             SagaCaptureCameraLogger.LogSnapshot(
                 "flight start", _sourceCamera, _camera, _debugSnapshots);

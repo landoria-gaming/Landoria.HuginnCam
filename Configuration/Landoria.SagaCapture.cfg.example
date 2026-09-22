@@ -22,17 +22,19 @@ GraphicsPreset = SameAsGame
 ## or UHD2160 (3840x2160).
 Resolution = SameAsGame
 
-## Maximum drone-camera rendering frame rate: 30 or 60 FPS.
+## Frame rate shared by PreviewMode, CaptureMode, the Unity game loop,
+## and the video recorder: 30 or 60 FPS. VSync is temporarily disabled
+## so Unity does not render more frames than the recorder accepts.
 MaximumFrameRate = 60
 
-## Override camera depth of field: Preset, Enabled, or Disabled.
-DepthOfField = Preset
+## Override camera depth of field: SameAsGame, Preset, Enabled, or Disabled.
+DepthOfField = SameAsGame
 
-## Override camera motion blur: Preset, Enabled, or Disabled.
-MotionBlur = Preset
+## Override camera motion blur: SameAsGame, Preset, Enabled, or Disabled.
+MotionBlur = SameAsGame
 
-## Override camera bloom: Preset, Enabled, or Disabled.
-Bloom = Preset
+## Override camera bloom: SameAsGame, Preset, Enabled, or Disabled.
+Bloom = SameAsGame
 
 [VideoEncoding]
 

@@ -12,12 +12,16 @@ namespace Landoria.SagaCapture
         private SagaCaptureRig _cameraRig;
         private Camera _gameplayCamera;
         private bool _gameplayCameraWasEnabled;
+        private RenderTexture _hiddenGameplayTarget;
+        private RenderTexture _originalGameplayTarget;
         private Coroutine _previewWarmupRoutine;
         private readonly SagaCaptureReturnTransition _returnTransition =
             new SagaCaptureReturnTransition();
         private bool _returning;
         private readonly SagaCaptureInterfaceController _interface =
             new SagaCaptureInterfaceController();
+        private readonly SagaCaptureFrameRateLimit _frameRateLimit =
+            new SagaCaptureFrameRateLimit();
 
         internal bool IsActive => _cameraRig != null;
 
@@ -67,13 +71,19 @@ namespace Landoria.SagaCapture
             {
                 _gameplayCamera = Camera.main;
                 ValidateGameplayCamera();
+                _frameRateLimit.Apply(
+                    "PreviewMode", Preference.CameraMaximumFrameRate);
                 _gameplayCameraWasEnabled = _gameplayCamera.enabled;
+                GraphicsSettingsState settings =
+                    SagaCaptureRendering.GetGraphicsSettings();
+                SagaCaptureRendering.GetResolution(settings,
+                    out int width, out int height, out FilterMode filterMode);
                 _cameraRig = gameObject.AddComponent<SagaCaptureRig>();
-                _cameraRig.Initialize(_gameplayCamera);
-                _cameraRig.BeginWarmup(
-                    Math.Max(2, Screen.width & ~1),
-                    Math.Max(2, Screen.height & ~1), 1,
-                    FilterMode.Bilinear);
+                _cameraRig.Initialize(_gameplayCamera, false, settings);
+                _cameraRig.BeginWarmup(width, height, 1, filterMode);
+                SagaCaptureCameraLogger.LogEffectiveConfiguration(
+                    "PreviewMode", _gameplayCamera, _cameraRig.Camera,
+                    GraphicsSettingsManager.Instance.ActiveSettings, settings);
                 _previewWarmupRoutine =
                     StartCoroutine(WarmupThenShowPreview());
             }
@@ -101,6 +111,7 @@ namespace Landoria.SagaCapture
             try
             {
                 _gameplayCamera.enabled = false;
+                BeginHiddenGameplayRendering();
                 _cameraRig.BeginPreview();
                 _interface.Hide();
             }
@@ -109,6 +120,35 @@ namespace Landoria.SagaCapture
                 SagaCapturePlugin.Log.LogError(exception);
                 Notify($"Saga Capture failed: {exception.Message}");
                 CompleteStopPreview();
+            }
+        }
+
+        // Keeps gameplay rendering offscreen to reproduce CaptureMode workload.
+        private void BeginHiddenGameplayRendering()
+        {
+            _originalGameplayTarget = _gameplayCamera.targetTexture;
+            _hiddenGameplayTarget = new RenderTexture(
+                Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32,
+                RenderTextureReadWrite.sRGB);
+            _hiddenGameplayTarget.Create();
+            _gameplayCamera.targetTexture = _hiddenGameplayTarget;
+            _gameplayCamera.enabled = true;
+        }
+
+        // Restores the gameplay camera target and releases its hidden texture.
+        private void EndHiddenGameplayRendering()
+        {
+            if (_gameplayCamera != null)
+            {
+                _gameplayCamera.enabled = false;
+                _gameplayCamera.targetTexture = _originalGameplayTarget;
+                _originalGameplayTarget = null;
+            }
+            if (_hiddenGameplayTarget != null)
+            {
+                _hiddenGameplayTarget.Release();
+                Destroy(_hiddenGameplayTarget);
+                _hiddenGameplayTarget = null;
             }
         }
 
@@ -149,6 +189,7 @@ namespace Landoria.SagaCapture
                 StopCoroutine(_previewWarmupRoutine);
                 _previewWarmupRoutine = null;
             }
+            EndHiddenGameplayRendering();
             if (_cameraRig != null)
             {
                 _cameraRig.Dispose();
@@ -161,6 +202,7 @@ namespace Landoria.SagaCapture
                 _gameplayCamera = null;
             }
             _returning = false;
+            _frameRateLimit.Restore("PreviewMode");
             _interface.Restore();
         }
 

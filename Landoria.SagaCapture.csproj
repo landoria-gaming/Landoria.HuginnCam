@@ -38,6 +38,7 @@
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.AudioModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.UI"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="FFmpegMediaWriter"><HintPath>$(MSBuildProjectDirectory)\lib\FFmpegMediaWriter.dll</HintPath><Private>true</Private></Reference>
@@ -69,9 +70,13 @@
     <Compile Include="Camera\SagaCaptureController.cs" />
     <Compile Include="Camera\SagaCaptureEffectMirror.cs" />
     <Compile Include="Camera\SagaCaptureEffects.cs" />
+    <Compile Include="Camera\SagaCaptureFrameRateLimit.cs" />
+    <Compile Include="Camera\SagaCaptureFrameRateDisplay.cs" />
     <Compile Include="Camera\SagaCaptureInterfaceController.cs" />
     <Compile Include="Camera\SagaCaptureMainCamera.cs" />
+    <Compile Include="Camera\SagaCapturePreviewPresenter.cs" />
     <Compile Include="Camera\SagaCaptureQualityOverride.cs" />
+    <Compile Include="Camera\SagaCaptureRendering.cs" />
     <Compile Include="Camera\SagaCaptureRig.cs" />
     <Compile Include="Camera\SagaCaptureReturnTransition.cs" />
     <Compile Include="ValheimDroneAdapter.cs" />

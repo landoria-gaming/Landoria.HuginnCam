@@ -58,22 +58,35 @@ namespace Landoria.SagaCapture
 
         // Applies user overrides after resolving the camera graphics preset.
         internal static void ApplyCameraEffectOverrides(
-            ref GraphicsSettingsState settings)
+            ref GraphicsSettingsState settings,
+            GraphicsSettingsState gameSettings)
         {
             settings.m_depthOfField = ResolveEffect(
-                depthOfFieldOverride.Value, settings.m_depthOfField);
+                depthOfFieldOverride.Value, settings.m_depthOfField,
+                gameSettings.m_depthOfField);
             settings.m_motionBlur = ResolveEffect(
-                motionBlurOverride.Value, settings.m_motionBlur);
+                motionBlurOverride.Value, settings.m_motionBlur,
+                gameSettings.m_motionBlur);
             settings.m_bloom = ResolveEffect(
-                bloomOverride.Value, settings.m_bloom);
+                bloomOverride.Value, settings.m_bloom,
+                gameSettings.m_bloom);
         }
 
-        // Resolves one effect override against its preset value.
+        // Resolves one effect against its preset and effective game values.
         private static bool ResolveEffect(CameraEffectOverride value,
-            bool presetValue)
+            bool presetValue, bool gameValue)
         {
-            return value == CameraEffectOverride.Enabled ||
-                   value == CameraEffectOverride.Preset && presetValue;
+            switch (value)
+            {
+                case CameraEffectOverride.SameAsGame:
+                    return gameValue;
+                case CameraEffectOverride.Enabled:
+                    return true;
+                case CameraEffectOverride.Disabled:
+                    return false;
+                default:
+                    return presetValue;
+            }
         }
 
         // Resolves SameAsGame or a custom vertical field of view.
@@ -156,7 +169,10 @@ namespace Landoria.SagaCapture
             cameraMaximumFrameRate = config.Bind(
                 "CameraRendering", "MaximumFrameRate", 60,
                 new ConfigDescription(
-                    "Maximum drone-camera rendering frame rate: 30 or 60 FPS.",
+                    "Frame rate shared by PreviewMode, CaptureMode, the " +
+                    "Unity game loop, and the video recorder: 30 or 60 FPS. " +
+                    "VSync is temporarily disabled so Unity does not render " +
+                    "more frames than the recorder accepts.",
                     new AcceptableValueList<int>(30, 60)));
             depthOfFieldOverride = BindEffectOverride(
                 config, "DepthOfField", "depth of field");
@@ -192,8 +208,9 @@ namespace Landoria.SagaCapture
             ConfigFile config, string key, string displayName)
         {
             return config.Bind("CameraRendering", key,
-                CameraEffectOverride.Preset,
-                $"Override camera {displayName}: Preset, Enabled, or Disabled.");
+                CameraEffectOverride.SameAsGame,
+                $"Override camera {displayName}: SameAsGame, Preset, " +
+                "Enabled, or Disabled.");
         }
 
         // Removes settings that became implementation constants from existing files.
@@ -226,6 +243,8 @@ namespace Landoria.SagaCapture
                 RemoveLegacy(config, "Recording.VideoEncoding",
                     "MaximumFrameRate", 60);
                 RemoveLegacy(config, "VideoEncoding", "MaximumFrameRate", 60);
+                RemoveLegacy(config, "CameraRendering",
+                    "LimitPlayerFPSRecording", 60);
                 RemoveLegacy(config, "Recording.VideoEncoding", "Resolution",
                     "SameAsGame");
                 RemoveLegacy(config, "VideoEncoding", "Resolution",
@@ -263,9 +282,9 @@ namespace Landoria.SagaCapture
             cameraRenderResolution.Value =
                 CameraRenderResolutionPreset.SameAsGame;
             cameraMaximumFrameRate.Value = 60;
-            depthOfFieldOverride.Value = CameraEffectOverride.Preset;
-            motionBlurOverride.Value = CameraEffectOverride.Preset;
-            bloomOverride.Value = CameraEffectOverride.Preset;
+            depthOfFieldOverride.Value = CameraEffectOverride.SameAsGame;
+            motionBlurOverride.Value = CameraEffectOverride.SameAsGame;
+            bloomOverride.Value = CameraEffectOverride.SameAsGame;
             sagaCameraFov.Value = "SameAsGame";
             showDroneVisual.Value = true;
             droneColor.Value = DroneShellColor.Metal;
