@@ -1,10 +1,5 @@
 ## Example BepInEx settings for the Valheim SagaCapture plugin.
 
-[Camera]
-
-## Vertical field of view of the camera, in degrees (40 to 120).
-SagaCameraFOV = 65
-
 [Controls]
 
 ## Enter or leave CaptureMode.
@@ -13,12 +8,42 @@ CaptureModeShortcut = F8
 ## Enter or leave PreviewMode. No recording.
 PreviewModeShortcut = F8 + LeftShift
 
-[Telemetry]
+[CameraRendering]
 
-## Session root directory passed to DronePilot.dll. Empty makes SagaCapture
-## create BepInEx/config/SagaCapture in the current profile. DronePilot.dll
-## creates Sessions/<session> subdirectories inside the supplied directory.
-RootDirectory =
+## Drone-camera vertical field of view: SameAsGame or 40 to 120 degrees.
+SagaCameraFOV = SameAsGame
+
+## Valheim graphics preset used to render the drone camera before encoding:
+## SameAsGame, VeryLow, Low, Medium, or High.
+GraphicsPreset = SameAsGame
+
+## Internal drone-camera resolution: SameAsGame, Preset (graphics preset value),
+## HD720 (1280x720), FullHD1080 (1920x1080), QHD1440 (2560x1440),
+## or UHD2160 (3840x2160).
+Resolution = SameAsGame
+
+## Override camera depth of field: Preset, Enabled, or Disabled.
+DepthOfField = Preset
+
+## Override camera motion blur: Preset, Enabled, or Disabled.
+MotionBlur = Preset
+
+## Override camera bloom: Preset, Enabled, or Disabled.
+Bloom = Preset
+
+[VideoEncoding]
+
+## Encoder quality preset for the output video: Low, Medium, or High.
+Quality = Low
+
+## Maximum frame rate written to the output video (30 to 60 FPS).
+MaximumFrameRate = 60
+
+## Output video resolution: SameAsGame, HD720 (1280x720),
+## FullHD1080 (1920x1080), QHD1440 (2560x1440), or UHD2160 (3840x2160).
+Resolution = SameAsGame
+
+[Telemetry]
 
 ## Time between camera-position and orbit-motion samples, in seconds (0.1 to 5).
 SampleIntervalSeconds = 0.5

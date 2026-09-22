@@ -118,12 +118,16 @@ namespace Landoria.SagaCapture
         // Creates an offscreen camera for recording.
         private void PrepareCamera(Camera gameplayCamera)
         {
+            GraphicsSettingsState graphicsSettings =
+                GetCaptureGraphicsSettings();
+            GetRecordingResolution(out int outputWidth, out int outputHeight);
+            GetRenderResolution(graphicsSettings, outputWidth, outputHeight,
+                out int renderWidth, out int renderHeight,
+                out FilterMode filterMode);
             _cameraRig = gameObject.AddComponent<SagaCaptureRig>();
-            _cameraRig.Initialize(gameplayCamera, false);
+            _cameraRig.Initialize(gameplayCamera, false, graphicsSettings);
             _cameraRig.BeginWarmup(
-                Math.Max(2, Screen.width & ~1),
-                Math.Max(2, Screen.height & ~1),
-                AntiAliasingSamples);
+                renderWidth, renderHeight, AntiAliasingSamples, filterMode);
         }
 
         // Creates a sequence containing the secondary camera.
@@ -143,17 +147,121 @@ namespace Landoria.SagaCapture
         private static UnityRuntimeCameraRecorder.RecordingSettings CreateSettings(
             string outputPath)
         {
+            GetRecordingResolution(out int width, out int height);
             return new UnityRuntimeCameraRecorder.RecordingSettings
             {
                 FfmpegPath = ResolveFfmpegDirectory(),
                 TemporaryContainerPath = outputPath + ".mkv.tmp",
                 OutputPath = outputPath,
-                Width = Math.Max(2, Screen.width & ~1),
-                Height = Math.Max(2, Screen.height & ~1),
+                Width = width,
+                Height = height,
                 MaximumFrameRate = Preference.MaximumFrameRate,
                 SourceAntiAliasingSamples = AntiAliasingSamples,
                 QualityPreset = Preference.RecordingQuality
             };
+        }
+
+        // Resolves the configured output dimensions.
+        private static void GetRecordingResolution(out int width, out int height)
+        {
+            height = Preference.RecordingResolution switch
+            {
+                RecordingResolutionPreset.HD720 => 720,
+                RecordingResolutionPreset.FullHD1080 => 1080,
+                RecordingResolutionPreset.QHD1440 => 1440,
+                RecordingResolutionPreset.UHD2160 => 2160,
+                _ => Math.Max(2, Screen.height & ~1)
+            };
+            width = Preference.RecordingResolution ==
+                    RecordingResolutionPreset.SameAsGame
+                ? Math.Max(2, Screen.width & ~1)
+                : height * 16 / 9;
+        }
+
+        // Resolves the active Valheim 3D rendering resolution and filter.
+        private static void GetRenderResolution(GraphicsSettingsState settings,
+            int outputWidth, int outputHeight,
+            out int width, out int height, out FilterMode filterMode)
+        {
+            GetConfiguredRenderResolution(settings.m_target3DResolutionVertical,
+                outputWidth, outputHeight, out width, out height);
+            filterMode = settings.m_upscalingAlgorithm ==
+                         UpscalingAlgorithm.NearestNeighbor
+                ? FilterMode.Point
+                : FilterMode.Bilinear;
+        }
+
+        // Resolves the configured camera-rendering height.
+        private static void GetConfiguredRenderResolution(int presetHeight,
+            int outputWidth, int outputHeight, out int width, out int height)
+        {
+            switch (Preference.CameraRenderResolution)
+            {
+                case CameraRenderResolutionPreset.SameAsGame:
+                    width = Screen.width;
+                    height = Screen.height;
+                    return;
+                case CameraRenderResolutionPreset.HD720:
+                    width = 1280;
+                    height = 720;
+                    return;
+                case CameraRenderResolutionPreset.FullHD1080:
+                    width = 1920;
+                    height = 1080;
+                    return;
+                case CameraRenderResolutionPreset.QHD1440:
+                    width = 2560;
+                    height = 1440;
+                    return;
+                case CameraRenderResolutionPreset.UHD2160:
+                    width = 3840;
+                    height = 2160;
+                    return;
+            }
+            if (presetHeight <= 0)
+            {
+                presetHeight = Screen.dpi <= 96f
+                    ? Screen.height
+                    : Mathf.RoundToInt(Screen.height * 96f / Screen.dpi);
+            }
+            else if (presetHeight == int.MaxValue)
+            {
+                presetHeight = Screen.height;
+            }
+            height = Math.Max(2, presetHeight & ~1);
+            width = Math.Max(2, (height * outputWidth / outputHeight) & ~1);
+        }
+
+        // Builds the graphics state selected for the capture camera.
+        private static GraphicsSettingsState GetCaptureGraphicsSettings()
+        {
+            GraphicsSettingsManager manager = GraphicsSettingsManager.Instance;
+            GraphicsSettingsState state = manager.ActiveSettings;
+            if (Preference.RecordingGraphicsPreset !=
+                CaptureGraphicsPreset.SameAsGame)
+            {
+                ApplyCapturePreset(manager, ref state);
+            }
+            Preference.ApplyCameraEffectOverrides(ref state);
+            return state;
+        }
+
+        // Applies the selected Valheim preset to a capture graphics state.
+        private static void ApplyCapturePreset(GraphicsSettingsManager manager,
+            ref GraphicsSettingsState state)
+        {
+            GraphicsModeConfiguration config =
+                manager.GetCurrentGraphicsModeConfiguration();
+            int presetId = Preference.RecordingGraphicsPreset switch
+            {
+                CaptureGraphicsPreset.VeryLow => 4,
+                CaptureGraphicsPreset.Low => 0,
+                CaptureGraphicsPreset.Medium => 1,
+                _ => 2
+            };
+            GraphicsSettingsPreset preset = config.GetPresetByID(presetId);
+            manager.SetGraphicsSettingsFromPreset(
+                config, ref state, preset, false);
         }
 
         // Resolves the FFmpeg directory used by the recorder.

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using AmplifyOcclusion;
 using UnityEngine;
 using UnityEngine.PostProcessing;
 
@@ -15,10 +16,13 @@ namespace Landoria.SagaCapture
             new Dictionary<Type, FieldInfo[]>();
         private static readonly HashSet<string> WarnedComponents =
             new HashSet<string>();
+        private GraphicsSettingsState? _captureSettings;
 
         // Recreates safe visual effects in their original component order.
-        internal void Initialize(Camera sourceCamera, GameObject target)
+        internal void Initialize(Camera sourceCamera, GameObject target,
+            GraphicsSettingsState? captureSettings = null)
         {
+            _captureSettings = captureSettings;
             foreach (Component source in
                      sourceCamera.gameObject.GetComponents<Component>())
             {
@@ -38,6 +42,7 @@ namespace Landoria.SagaCapture
 
                 CopySerializedSettings(mirror.Source, mirror.Destination);
                 SynchronizeEnabledState(mirror.Source, mirror.Destination);
+                ApplyCaptureSettings(mirror.Destination);
             }
         }
 
@@ -45,6 +50,7 @@ namespace Landoria.SagaCapture
         internal void Clear()
         {
             _mirrors.Clear();
+            _captureSettings = null;
         }
 
         // Copies one supported component and ignores camera infrastructure.
@@ -72,6 +78,7 @@ namespace Landoria.SagaCapture
             Component destination = target.AddComponent(source.GetType());
             CopySerializedSettings(source, destination);
             SynchronizeEnabledState(source, destination);
+            ApplyCaptureSettings(destination);
             _mirrors.Add(new SagaCaptureEffectMirror(source, destination));
         }
 
@@ -184,7 +191,7 @@ namespace Landoria.SagaCapture
         }
 
         // Shares the source color-grading and exposure profile.
-        private static void CopyPostProcessing(
+        private void CopyPostProcessing(
             Camera sourceCamera, GameObject target)
         {
             PostProcessingBehaviour source =
@@ -196,8 +203,48 @@ namespace Landoria.SagaCapture
 
             PostProcessingBehaviour destination =
                 target.AddComponent<PostProcessingBehaviour>();
-            destination.profile = source.profile;
+            destination.profile = UnityEngine.Object.Instantiate(source.profile);
             destination.enabled = source.enabled;
+            if (_captureSettings.HasValue)
+            {
+                GraphicsSettingsState settings = _captureSettings.Value;
+                destination.profile.bloom.enabled = settings.m_bloom;
+                destination.profile.motionBlur.enabled = settings.m_motionBlur;
+                destination.profile.chromaticAberration.enabled =
+                    settings.m_chromaticAberration;
+                destination.profile.antialiasing.enabled =
+                    settings.m_antiAliasing;
+            }
+        }
+
+        // Applies capture-only effect switches after copying source settings.
+        private void ApplyCaptureSettings(Component destination)
+        {
+            if (!_captureSettings.HasValue)
+            {
+                return;
+            }
+            GraphicsSettingsState settings = _captureSettings.Value;
+            if (destination is AmplifyOcclusionEffect ssao)
+            {
+                ssao.enabled = settings.m_ssao > 0;
+                ssao.Downsample = true;
+                ssao.SampleCount = settings.m_ssao > 1
+                    ? SampleCountLevel.Medium
+                    : SampleCountLevel.Low;
+            }
+            else if (destination.GetType().FullName ==
+                     "UnityStandardAssets.ImageEffects.DepthOfField" &&
+                     destination is Behaviour dof)
+            {
+                dof.enabled = settings.m_depthOfField;
+            }
+            else if (destination.GetType().FullName ==
+                     "UnityStandardAssets.ImageEffects.SunShafts" &&
+                     destination is Behaviour sunShafts)
+            {
+                sunShafts.enabled = settings.m_sunShafts;
+            }
         }
     }
 }

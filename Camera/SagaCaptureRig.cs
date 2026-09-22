@@ -24,7 +24,8 @@ namespace Landoria.SagaCapture
         internal bool IsFlying => _flightEnabled;
 
         // Clones the gameplay camera and optionally transfers audio listening.
-        internal void Initialize(Camera sourceCamera, bool transferAudio = true)
+        internal void Initialize(Camera sourceCamera, bool transferAudio = true,
+            GraphicsSettingsState? captureSettings = null)
         {
             _sourceCamera = sourceCamera;
             _debugSnapshots = Preference.CreateTelemetry(transferAudio).Enabled;
@@ -33,10 +34,15 @@ namespace Landoria.SagaCapture
             cameraObject.transform.SetParent(transform, false);
             _camera = cameraObject.AddComponent<Camera>();
             _camera.CopyFrom(sourceCamera);
-            _camera.fieldOfView = Preference.SagaCameraFOV;
+            _camera.fieldOfView = Preference.GetSagaCameraFov(sourceCamera);
             _camera.depth = sourceCamera.depth + 1f;
             _camera.enabled = false;
-            _effects.Initialize(sourceCamera, cameraObject);
+            _effects.Initialize(sourceCamera, cameraObject, captureSettings);
+            if (captureSettings.HasValue)
+            {
+                cameraObject.AddComponent<SagaCaptureQualityOverride>()
+                    .Initialize(captureSettings.Value);
+            }
             SynchronizePose();
             SagaCaptureCameraLogger.LogSnapshot(
                 "created", _sourceCamera, _camera, _debugSnapshots);
@@ -98,7 +104,7 @@ namespace Landoria.SagaCapture
         // Starts invisible rendering for the recording pipeline.
         internal void BeginWarmup(
             int requestedWidth, int requestedHeight,
-            int antiAliasingSamples)
+            int antiAliasingSamples, FilterMode filterMode)
         {
             int width = Mathf.Max(2, requestedWidth & ~1);
             int height = Mathf.Max(2, requestedHeight & ~1);
@@ -106,6 +112,7 @@ namespace Landoria.SagaCapture
                 width, height, 0, RenderTextureFormat.ARGB32,
                 RenderTextureReadWrite.sRGB);
             _offscreenTarget.antiAliasing = antiAliasingSamples;
+            _offscreenTarget.filterMode = filterMode;
             _offscreenTarget.Create();
             _camera.targetTexture = _offscreenTarget;
             _camera.enabled = true;
@@ -120,7 +127,7 @@ namespace Landoria.SagaCapture
             {
                 return;
             }
-            _camera.fieldOfView = Preference.SagaCameraFOV;
+            _camera.fieldOfView = Preference.GetSagaCameraFov(_sourceCamera);
             if (!_flightEnabled)
             {
                 if (_synchronizeSourcePose)

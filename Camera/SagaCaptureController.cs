@@ -72,7 +72,8 @@ namespace Landoria.SagaCapture
                 _cameraRig.Initialize(_gameplayCamera);
                 _cameraRig.BeginWarmup(
                     Math.Max(2, Screen.width & ~1),
-                    Math.Max(2, Screen.height & ~1), 1);
+                    Math.Max(2, Screen.height & ~1), 1,
+                    FilterMode.Bilinear);
                 _previewWarmupRoutine =
                     StartCoroutine(WarmupThenShowPreview());
             }
