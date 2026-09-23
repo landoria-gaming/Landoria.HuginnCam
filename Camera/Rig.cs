@@ -24,6 +24,7 @@ namespace Landoria.SagaCapture
         private const float DistantViewpointRadius = 8f;
         private const float MinimumCutInterval = 8f;
         private const float MaximumCutInterval = 15f;
+        private const int ViewpointCandidateCount = 12;
 
         internal Camera Camera => _camera;
         internal bool IsFlying => _flightEnabled;
@@ -151,26 +152,36 @@ namespace Landoria.SagaCapture
                  Preference.Content == OutputContent.DroneOnly) &&
                 Time.time >= _nextViewpointCut)
             {
-                CutViewpoint(player);
+                TryCutViewpoint(false);
             }
             _pilot?.Update(player.GetVelocity(), player.m_runSpeed);
             _pilot?.SetVisual(!_previewFlight && Preference.ShowDroneVisual,
                 Preference.ShellColor);
         }
 
-        // Cuts on demand when a mixed recording returns to the drone source.
-        internal void CutViewpoint()
+        // Returns whether the current camera has an unobstructed player view.
+        internal bool HasTargetVisibility()
         {
             Player player = Player.m_localPlayer;
-            if (_flightEnabled && player != null)
+            if (!_flightEnabled || player == null)
             {
-                CutViewpoint(player);
+                return false;
             }
+            Vector3 focus = player.transform.position + Vector3.up * 1.60f;
+            Vector3 viewport = _camera.WorldToViewportPoint(focus);
+            return viewport.z > 0f && viewport.x >= 0f && viewport.x <= 1f &&
+                   viewport.y >= 0f && viewport.y <= 1f &&
+                   IsTargetVisible(_camera.transform.position, player);
         }
 
-        // Cuts to a random distance at a substantially different angle.
-        private void CutViewpoint(Player player)
+        // Cuts to a visible random viewpoint, optionally rendering it now.
+        internal bool TryCutViewpoint(bool renderImmediately)
         {
+            Player player = Player.m_localPlayer;
+            if (!_flightEnabled || player == null)
+            {
+                return false;
+            }
             Vector3 focus = player.transform.position + Vector3.up * 1.60f;
             Vector3 radial = _camera.transform.position - focus;
             radial.y = 0f;
@@ -178,19 +189,58 @@ namespace Landoria.SagaCapture
             {
                 radial = -player.transform.forward;
             }
+            for (int index = 0; index < ViewpointCandidateCount; index++)
+            {
+                Vector3 position = CreateViewpoint(
+                    focus, radial.normalized, player);
+                if (!IsTargetVisible(position, player))
+                {
+                    continue;
+                }
+                _pilot?.Reposition(position);
+                if (renderImmediately)
+                {
+                    _camera.Render();
+                }
+                ScheduleViewpointCut();
+                return true;
+            }
+            ScheduleViewpointCut();
+            return false;
+        }
+
+        // Generates one substantially different position around the player.
+        private static Vector3 CreateViewpoint(
+            Vector3 focus, Vector3 radial, Player player)
+        {
             float angle = Random.Range(110f, 250f);
-            radial = Quaternion.Euler(0f, angle, 0f) * radial.normalized;
+            Vector3 direction = Quaternion.Euler(0f, angle, 0f) * radial;
             float radius = Random.Range(
                 NearViewpointRadius, DistantViewpointRadius);
-            Vector3 position = focus + radial * radius;
+            Vector3 position = focus + direction * radius;
             float ground = ValheimDroneAdapter.GroundHeight(position) ??
                            player.transform.position.y;
-            float height = Mathf.Lerp(2f, 4f,
-                Mathf.InverseLerp(NearViewpointRadius,
-                    DistantViewpointRadius, radius));
-            position.y = Mathf.Max(focus.y, ground + height);
-            _pilot?.Reposition(position);
-            ScheduleViewpointCut();
+            float amount = Mathf.InverseLerp(
+                NearViewpointRadius, DistantViewpointRadius, radius);
+            position.y = Mathf.Max(focus.y, ground + Mathf.Lerp(2f, 4f, amount));
+            return position;
+        }
+
+        // Tests the frame and physical line of sight from one camera position.
+        private bool IsTargetVisible(Vector3 position, Player player)
+        {
+            Vector3 focus = player.transform.position + Vector3.up * 1.60f;
+            Vector3 direction = focus - position;
+            RaycastHit[] hits = Physics.RaycastAll(position,
+                direction.normalized, direction.magnitude,
+                Physics.AllLayers, QueryTriggerInteraction.Ignore);
+            System.Array.Sort(hits,
+                (left, right) => left.distance.CompareTo(right.distance));
+            foreach (RaycastHit hit in hits)
+            {
+                return hit.collider.GetComponentInParent<Player>() == player;
+            }
+            return true;
         }
 
         // Chooses the next unsynchronized viewpoint-cut time.

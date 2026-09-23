@@ -42,7 +42,7 @@ namespace Landoria.SagaCapture
             previewModeShortcut.Value;
         internal const UnityRuntimeCameraRecorder.RecordingQualityPreset
             RecordingQuality =
-                UnityRuntimeCameraRecorder.RecordingQualityPreset.Low;
+                UnityRuntimeCameraRecorder.RecordingQualityPreset.Medium;
         internal static CaptureGraphicsPreset RecordingGraphicsPreset =>
             captureGraphicsPreset.Value;
         internal static CameraRenderResolutionPreset CameraRenderResolution =>

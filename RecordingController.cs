@@ -14,12 +14,13 @@ namespace Landoria.SagaCapture
         private const float MinimumWarmupSeconds = 0.5f;
         private const float MinimumShotDurationSeconds = 5f;
         private const float MaximumShotDurationSeconds = 10f;
+        private const float TargetLossGraceSeconds = 1f;
         private SagaCaptureRig _cameraRig;
         private Recorder _recorder;
         private Coroutine _warmupRoutine;
         private AudioListener _gameplayListener;
         private string _outputPath;
-        private int _lastVideoSourceIndex = -1;
+        private float _targetLostSince = -1f;
         private readonly SagaCaptureFrameRateLimit _frameRateLimit =
             new SagaCaptureFrameRateLimit();
 
@@ -29,7 +30,7 @@ namespace Landoria.SagaCapture
             _recorder?.IsCapturing == true &&
             _recorder.ActiveVideoSourceIndex == 0;
 
-        // Reframes the drone whenever a mixed recording returns from gameplay.
+        // Forces gameplay when the active drone view loses the player.
         private void Update()
         {
             if (_recorder?.IsCapturing != true ||
@@ -37,14 +38,23 @@ namespace Landoria.SagaCapture
             {
                 return;
             }
-            int sourceIndex = _recorder.ActiveVideoSourceIndex;
-            if (_lastVideoSourceIndex == 1 && sourceIndex == 0)
+            if (_recorder.ActiveVideoSourceIndex != 0 ||
+                _cameraRig?.HasTargetVisibility() == true)
             {
-                _cameraRig?.CutViewpoint();
+                _targetLostSince = -1f;
+                return;
             }
-            if (sourceIndex >= 0)
+            if (_targetLostSince < 0f)
             {
-                _lastVideoSourceIndex = sourceIndex;
+                _targetLostSince = Time.time;
+                return;
+            }
+            if (Time.time - _targetLostSince >= TargetLossGraceSeconds)
+            {
+                _recorder.SetActiveVideoSourceIndex(1);
+                _targetLostSince = -1f;
+                SagaCapturePlugin.Log.LogInfo(
+                    "Drone target occluded; switched to gameplay.");
             }
         }
 
@@ -116,7 +126,7 @@ namespace Landoria.SagaCapture
             try
             {
                 _recorder = gameObject.AddComponent<Recorder>();
-                _lastVideoSourceIndex = -1;
+                _targetLostSince = -1f;
                 SubscribeRecorder();
                 _cameraRig.BeginFlight();
                 _recorder.StartRecording(
@@ -190,8 +200,25 @@ namespace Landoria.SagaCapture
                 Transitions = new[]
                 {
                     UnityRuntimeCameraRecorder.VideoSequenceTransition.NoTransition
-                }
+                },
+                CanActivateSource = CanActivateVideoSource
             };
+        }
+
+        // Allows drone activation only after finding a visible camera position.
+        private bool CanActivateVideoSource(int sourceIndex)
+        {
+            if (sourceIndex != 0)
+            {
+                return true;
+            }
+            bool visible = _cameraRig?.TryCutViewpoint(true) == true;
+            if (!visible)
+            {
+                SagaCapturePlugin.Log.LogInfo(
+                    "Drone return postponed: no visible target viewpoint.");
+            }
+            return visible;
         }
 
         // Creates the encoder and output configuration.
@@ -299,7 +326,7 @@ namespace Landoria.SagaCapture
                 _recorder = null;
             }
             _gameplayListener = null;
-            _lastVideoSourceIndex = -1;
+            _targetLostSince = -1f;
         }
 
         // Releases the offscreen camera.

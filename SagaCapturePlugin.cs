@@ -29,6 +29,16 @@ namespace Landoria.SagaCapture
             IsPreviewModeActive ||
             _instance?._recordingController?.IsDroneImageActive == true;
 
+        // Stops an active recording before a menu exit action continues.
+        internal static void StopRecordingForMenuExit()
+        {
+            if (_instance?._recordingController?.IsActive == true)
+            {
+                Log.LogInfo("Stopping recording before leaving the game.");
+                _instance._recordingController.StopRecording();
+            }
+        }
+
         // Initializes the plugin logging.
         private void Awake()
         {

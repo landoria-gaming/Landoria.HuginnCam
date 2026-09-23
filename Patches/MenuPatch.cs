@@ -24,4 +24,26 @@ namespace Landoria.SagaCapture
             return !consumed && !activeEscape;
         }
     }
+
+    // Stops recording when the player selects the quit menu item.
+    [HarmonyPatch(typeof(Menu), nameof(Menu.OnQuit))]
+    internal static class SagaCaptureQuitMenuPatch
+    {
+        // Starts recorder finalization before Valheim opens the confirmation dialog.
+        private static void Prefix()
+        {
+            SagaCapturePlugin.StopRecordingForMenuExit();
+        }
+    }
+
+    // Stops recording when the player selects the disconnect menu item.
+    [HarmonyPatch(typeof(Menu), nameof(Menu.OnLogout))]
+    internal static class SagaCaptureLogoutMenuPatch
+    {
+        // Starts recorder finalization before Valheim opens the confirmation dialog.
+        private static void Prefix()
+        {
+            SagaCapturePlugin.StopRecordingForMenuExit();
+        }
+    }
 }
