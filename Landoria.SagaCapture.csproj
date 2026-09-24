@@ -85,7 +85,7 @@
     <Content Include="README.md" />
   </ItemGroup>
   <ItemGroup>
-    <_SnapshotExtraFiles Include="$(MSBuildProjectDirectory)\bin\Release\Direct3DVideoEncoder.dll" Condition="Exists('$(MSBuildProjectDirectory)\bin\Release\Direct3DVideoEncoder.dll')" />
+    <_SnapshotExtraFiles Include="$(MSBuildProjectDirectory)\bin\Release\Direct3DVideoEncoder.dll" />
   </ItemGroup>
   <!-- Downloads and extracts the mutable camera recorder snapshot only when its ETag changes. -->
   <Target Name="UpdateCameraRecorderLibraries" BeforeTargets="PrepareForBuild">
