@@ -11,6 +11,8 @@ namespace Landoria.SagaCapture
     {
         private static ConfigEntry<KeyboardShortcut> captureModeShortcut;
         private static ConfigEntry<int> cameraMaximumFrameRate;
+        private static ConfigEntry<
+            UnityRuntimeCameraRecorder.RecordingQualityPreset> recordingQuality;
         private static ConfigEntry<bool> gameplayIncludeUi;
         private static ConfigEntry<float> minimumShotDuration;
         private static ConfigEntry<float> maximumShotDuration;
@@ -21,9 +23,8 @@ namespace Landoria.SagaCapture
 
         internal static KeyboardShortcut CaptureModeShortcut =>
             captureModeShortcut.Value;
-        internal const UnityRuntimeCameraRecorder.RecordingQualityPreset
-            RecordingQuality =
-                UnityRuntimeCameraRecorder.RecordingQualityPreset.Medium;
+        internal static UnityRuntimeCameraRecorder.RecordingQualityPreset
+            RecordingQuality => recordingQuality.Value;
         internal static int CameraMaximumFrameRate =>
             cameraMaximumFrameRate.Value;
         internal static bool GameplayIncludeUi => gameplayIncludeUi.Value;
@@ -50,6 +51,11 @@ namespace Landoria.SagaCapture
                     "VSync is temporarily disabled so Unity does not render " +
                     "more frames than the recorder accepts.",
                     new AcceptableValueList<int>(30, 60)));
+            recordingQuality = config.Bind(
+                "Recording", "Quality",
+                UnityRuntimeCameraRecorder.RecordingQualityPreset.Medium,
+                "Recording quality: Low, Medium, High, or Highest. " +
+                "Lower quality reduces file size and encoding load.");
             gameplayIncludeUi = config.Bind(
                 "GameplayCamera", "IncludeUI", true,
                 "Include Valheim's interface in gameplay-camera shots. " +
@@ -75,6 +81,8 @@ namespace Landoria.SagaCapture
         {
             captureModeShortcut.Value = new KeyboardShortcut(KeyCode.F8);
             cameraMaximumFrameRate.Value = 60;
+            recordingQuality.Value =
+                UnityRuntimeCameraRecorder.RecordingQualityPreset.Medium;
             gameplayIncludeUi.Value = true;
             minimumShotDuration.Value = 5f;
             maximumShotDuration.Value = 10f;

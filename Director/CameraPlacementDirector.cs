@@ -7,6 +7,7 @@ namespace Landoria.SagaCapture
     internal sealed class CameraPlacementDirector
     {
         private const int MaximumPlacementAttempts = 4;
+        private const float MinimumViewAngle = 45f;
         private static readonly CameraPlacement[] NormalPlacements =
         {
             CameraPlacement.Front,
@@ -36,7 +37,8 @@ namespace Landoria.SagaCapture
                  attempt < MaximumPlacementAttempts; attempt++)
             {
                 CameraPlacement placement = SelectPlacement(placements);
-                if (!rig.TryCutViewpoint(placement, renderImmediately))
+                if (!rig.TryCutViewpoint(
+                    placement, MinimumViewAngle, renderImmediately))
                 {
                     continue;
                 }

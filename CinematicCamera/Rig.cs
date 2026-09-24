@@ -110,7 +110,8 @@ namespace Landoria.SagaCapture
 
         // Tries one director-selected viewpoint and optionally renders it now.
         internal bool TryCutViewpoint(
-            CameraPlacement placement, bool renderImmediately)
+            CameraPlacement placement, float minimumViewAngle,
+            bool renderImmediately)
         {
             Player player = Player.m_localPlayer;
             if (!_movementEnabled || player == null)
@@ -119,7 +120,8 @@ namespace Landoria.SagaCapture
             }
             Vector3 position = CreateViewpoint(PlayerFocus(player), player,
                 placement);
-            if (!IsTargetVisible(position, player))
+            if (!HasDistinctDirection(position, player, minimumViewAngle) ||
+                !IsTargetVisible(position, player))
             {
                 return false;
             }
@@ -129,6 +131,18 @@ namespace Landoria.SagaCapture
                 _camera.Render();
             }
             return true;
+        }
+
+        // Rejects a view whose real horizontal angle resembles the current one.
+        private bool HasDistinctDirection(
+            Vector3 position, Player player, float minimumViewAngle)
+        {
+            Vector3 current = _cameraOperator.DirectionFromTarget;
+            Vector3 candidate = position - player.transform.position;
+            candidate.y = 0f;
+            return current.sqrMagnitude == 0f ||
+                   candidate.sqrMagnitude == 0f ||
+                   Vector3.Angle(current, candidate) >= minimumViewAngle;
         }
 
         // Reports whether the player currently occupies a forested area.
