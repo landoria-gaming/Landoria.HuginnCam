@@ -7,16 +7,35 @@ namespace Landoria.SagaCapture
     internal sealed class CameraPlacementDirector
     {
         private const int MaximumPlacementAttempts = 4;
+        private static readonly CameraPlacement[] NormalPlacements =
+        {
+            CameraPlacement.Front,
+            CameraPlacement.Left,
+            CameraPlacement.Right
+        };
+        private static readonly CameraPlacement[] OpenAreaPlacements =
+        {
+            CameraPlacement.Front,
+            CameraPlacement.Left,
+            CameraPlacement.Right,
+            CameraPlacement.Front,
+            CameraPlacement.Left,
+            CameraPlacement.Right,
+            CameraPlacement.FrontTop,
+            CameraPlacement.LeftTop,
+            CameraPlacement.RightTop
+        };
         private CameraPlacement? _lastPlacement;
 
         // Finds a visible placement, excluding elevated views in forests.
         internal bool TryPlace(SagaCaptureRig rig, bool renderImmediately)
         {
-            int placementCount = rig.IsTargetInForest() ? 3 : 6;
+            CameraPlacement[] placements = rig.IsTargetInForest()
+                ? NormalPlacements : OpenAreaPlacements;
             for (int attempt = 0;
                  attempt < MaximumPlacementAttempts; attempt++)
             {
-                CameraPlacement placement = SelectPlacement(placementCount);
+                CameraPlacement placement = SelectPlacement(placements);
                 if (!rig.TryCutViewpoint(placement, renderImmediately))
                 {
                     continue;
@@ -27,20 +46,21 @@ namespace Landoria.SagaCapture
             return false;
         }
 
-        // Selects every allowed placement equally while avoiding repetition.
-        private CameraPlacement SelectPlacement(int placementCount)
+        // Selects a weighted placement without repeating the previous view.
+        private CameraPlacement SelectPlacement(CameraPlacement[] placements)
         {
-            int index = !_lastPlacement.HasValue ||
-                (int)_lastPlacement.Value >= placementCount
-                    ? Random.Range(0, placementCount)
-                    : Random.Range(0, placementCount - 1);
-            if (_lastPlacement.HasValue &&
-                (int)_lastPlacement.Value < placementCount &&
-                index >= (int)_lastPlacement.Value)
+            var candidates = new CameraPlacement[placements.Length];
+            int count = 0;
+            foreach (CameraPlacement placement in placements)
             {
-                index++;
+                if (_lastPlacement.HasValue &&
+                    placement == _lastPlacement.Value)
+                {
+                    continue;
+                }
+                candidates[count++] = placement;
             }
-            return (CameraPlacement)index;
+            return candidates[Random.Range(0, count)];
         }
     }
 }

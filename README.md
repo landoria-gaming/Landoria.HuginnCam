@@ -35,8 +35,9 @@ folder. The folder is created automatically.
 
 ## Automatic direction
 
-- Cinematic views are selected equally from the front, left, and right.
-- Elevated variants add `4 m` by default and are used only outside forests.
+- Front, left, and right placements have equal chances.
+- Elevated variants add `4 m` by default, occur half as often as their normal
+  counterparts, and are used only outside forests.
 - The Director avoids repeating the same placement twice when possible.
 - Up to four positions are tested when looking for a clear view of the player.
 - Gameplay and cinematic views alternate at configurable intervals.
