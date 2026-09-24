@@ -3,10 +3,10 @@ using UnityEngine;
 
 namespace Landoria.SagaCapture
 {
-    // Resolves the rendering state shared by preview and recording modes.
+    // Resolves the rendering state used by recording mode.
     internal static class SagaCaptureRendering
     {
-        // Builds the graphics state selected for the drone camera.
+        // Builds the graphics state selected for the cinematic camera.
         internal static GraphicsSettingsState GetGraphicsSettings()
         {
             GraphicsSettingsManager manager = GraphicsSettingsManager.Instance;
@@ -20,7 +20,7 @@ namespace Landoria.SagaCapture
             return state;
         }
 
-        // Resolves the configured drone-camera resolution and filter.
+        // Resolves the configured cinematic-camera resolution and filter.
         internal static void GetResolution(GraphicsSettingsState settings,
             out int width, out int height, out FilterMode filterMode)
         {

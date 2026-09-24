@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Landoria.SagaCapture
 {
-    // Displays measured Saga-camera FPS on the player screen only.
+    // Displays measured cinematic-camera FPS on the player screen.
     internal sealed class SagaCaptureFrameRateDisplay : MonoBehaviour
     {
         private GUIStyle _style;
@@ -16,7 +16,7 @@ namespace Landoria.SagaCapture
             _measurementStartedAt = Time.realtimeSinceStartup;
         }
 
-        // Measures frames actually rendered by the attached Saga camera.
+        // Measures frames rendered by the attached cinematic camera.
         private void OnPostRender()
         {
             _renderedFrames++;
@@ -30,7 +30,7 @@ namespace Landoria.SagaCapture
             _measurementStartedAt = Time.realtimeSinceStartup;
         }
 
-        // Draws the diagnostic after camera rendering, outside the recording.
+        // Draws the measurement on the local player screen.
         private void OnGUI()
         {
             if (_style == null)
@@ -43,8 +43,8 @@ namespace Landoria.SagaCapture
                     normal = { textColor = Color.white }
                 };
             }
-            string text = $"Saga {_framesPerSecond:F1} FPS";
-            GUI.Label(new Rect(8f, 6f, 300f, 55f), text, _style);
+            GUI.Label(new Rect(8f, 6f, 300f, 55f),
+                $"Saga {_framesPerSecond:F1} FPS", _style);
         }
     }
 }

@@ -86,7 +86,7 @@ namespace Landoria.SagaCapture
         {
             return new UnityRuntimeCameraRecorder.RecordingSettings
             {
-                FfmpegPath = RecordingController.ResolveFfmpegDirectory(),
+                FfmpegPath = ShotDirector.ResolveFfmpegDirectory(),
                 TemporaryContainerPath = _temporaryPath,
                 OutputPath = _outputPath,
                 QualityPreset = Preference.RecordingQuality

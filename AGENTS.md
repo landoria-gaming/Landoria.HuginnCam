@@ -6,4 +6,4 @@
 
 ## Repository specific rules
 
-- The camera is a lightweight drone with little inertia.
+- The cinematic camera is lightweight and responsive.

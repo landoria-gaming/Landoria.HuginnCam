@@ -1,46 +1,33 @@
 using UnityEngine;
-using DronePilot;
+using CameraOperator;
 
 namespace Landoria.SagaCapture
 {
-    // Owns the secondary camera used for preview and recording.
+    // Owns the secondary camera used for recording.
     internal sealed class SagaCaptureRig : MonoBehaviour
     {
         private Camera _camera;
         private Camera _sourceCamera;
-        private AudioListener _listener;
-        private AudioListener _originalListener;
         private RenderTexture _offscreenTarget;
-        private readonly SagaCaptureMainCamera _mainCamera =
-            new SagaCaptureMainCamera();
-        private DronePilotController _pilot;
+        private CameraOperatorController _cameraOperator;
         private readonly SagaCaptureEffects _effects = new SagaCaptureEffects();
-        private bool _flightEnabled;
-        private bool _previewFlight;
-        private bool _debugSnapshots;
-        private bool _synchronizeSourcePose = true;
-        private float _nextViewpointCut;
-        private const float NearViewpointRadius = 3f;
-        private const float DistantViewpointRadius = 8f;
-        private const float MinimumCutInterval = 8f;
-        private const float MaximumCutInterval = 15f;
-        private const int ViewpointCandidateCount = 12;
+        private bool _movementEnabled;
+        private const int ViewpointCandidateCount = 4;
 
         internal Camera Camera => _camera;
-        internal bool IsFlying => _flightEnabled;
+        internal RenderTexture OutputTexture => _offscreenTarget;
+        internal bool IsMoving => _movementEnabled;
 
-        // Clones the gameplay camera and optionally transfers audio listening.
-        internal void Initialize(Camera sourceCamera, bool transferAudio = true,
+        // Clones the gameplay camera for the recording pipeline.
+        internal void Initialize(Camera sourceCamera,
             GraphicsSettingsState? captureSettings = null)
         {
             _sourceCamera = sourceCamera;
-            _debugSnapshots = Preference.CreateTelemetry(transferAudio).Enabled;
-            _mainCamera.Initialize(sourceCamera);
             GameObject cameraObject = new GameObject("SagaCaptureCamera");
             cameraObject.transform.SetParent(transform, false);
             _camera = cameraObject.AddComponent<Camera>();
             _camera.CopyFrom(sourceCamera);
-            _camera.fieldOfView = Preference.GetDroneCameraFov(sourceCamera);
+            _camera.fieldOfView = sourceCamera.fieldOfView;
             _camera.depth = sourceCamera.depth + 1f;
             _camera.enabled = false;
             _effects.Initialize(sourceCamera, cameraObject, captureSettings);
@@ -50,66 +37,24 @@ namespace Landoria.SagaCapture
                     .Initialize(captureSettings.Value);
             }
             SynchronizePose();
-            SagaCaptureCameraLogger.LogSnapshot(
-                "created", _sourceCamera, _camera, _debugSnapshots);
-            if (transferAudio)
-            {
-                TransferAudio(sourceCamera, cameraObject);
-            }
-        }
-
-        // Displays the secondary camera directly on the player's screen.
-        internal void BeginPreview()
-        {
-            _camera.gameObject.AddComponent<SagaCapturePreviewPresenter>()
-                .Initialize(_offscreenTarget);
-            _camera.enabled = true;
-            BeginFlight(true);
         }
 
         // Allows autonomous movement after camera preparation is complete.
-        internal void BeginFlight(bool preview = false)
+        internal void BeginMovement()
         {
-            if (preview)
-            {
-                _mainCamera.Take(_camera);
-            }
-            _camera.gameObject.AddComponent<SagaCaptureFrameRateDisplay>();
             SynchronizePose();
-            SagaCaptureCameraLogger.LogSnapshot(
-                "flight start", _sourceCamera, _camera, _debugSnapshots);
+            _camera.gameObject.AddComponent<SagaCaptureFrameRateDisplay>();
             Player player = Player.m_localPlayer;
             if (player == null)
             {
                 throw new System.InvalidOperationException(
                     "The local player is unavailable.");
             }
-            var adapter = new ValheimDroneAdapter();
-            _previewFlight = preview;
-            _pilot = new DronePilotController(
-                _camera, player.gameObject, Preference.DroneConfigPath,
-                adapter.CreateWorld(), adapter.CreateProfiles(),
-                Vector3.up * 1.60f, Preference.CreateTelemetry(preview),
-                droneVisual: new DroneVisualOptions
-                {
-                    ViewerCamera = _sourceCamera,
-                    Visible = !preview && Preference.ShowDroneVisual,
-                    Color = Preference.ShellColor,
-                    LogInfo = message => SagaCapturePlugin.Log.LogInfo(message),
-                    LogWarning = message => SagaCapturePlugin.Log.LogWarning(message),
-                    LogError = message => SagaCapturePlugin.Log.LogError(message)
-                });
-            _flightEnabled = true;
-            ScheduleViewpointCut();
-        }
-
-        // Stops autonomous flight without snapping back to the source pose.
-        internal void PauseFlight()
-        {
-            _flightEnabled = false;
-            _synchronizeSourcePose = false;
-            _pilot?.Dispose();
-            _pilot = null;
+            var adapter = new ValheimCameraAdapter();
+            _cameraOperator = new CameraOperatorController(
+                _camera, player.gameObject, Preference.CameraOperatorConfigPath,
+                adapter.CreateWorld(), adapter.CreateProfiles());
+            _movementEnabled = true;
         }
 
         // Starts invisible rendering for the recording pipeline.
@@ -129,7 +74,7 @@ namespace Landoria.SagaCapture
             _camera.enabled = true;
         }
 
-        // Updates autonomous drone flight after player movement completes.
+        // Updates autonomous camera movement after player movement completes.
         private void LateUpdate()
         {
             _effects.Synchronize();
@@ -138,36 +83,25 @@ namespace Landoria.SagaCapture
             {
                 return;
             }
-            _camera.fieldOfView = Preference.GetDroneCameraFov(_sourceCamera);
-            if (!_flightEnabled)
+            _camera.fieldOfView = _sourceCamera.fieldOfView;
+            if (!_movementEnabled)
             {
-                if (_synchronizeSourcePose)
-                {
-                    SynchronizePose();
-                }
+                SynchronizePose();
                 return;
             }
 
-            if ((_previewFlight ||
-                 Preference.Content == OutputContent.DroneOnly) &&
-                Time.time >= _nextViewpointCut)
-            {
-                TryCutViewpoint(false);
-            }
-            _pilot?.Update(player.GetVelocity(), player.m_runSpeed);
-            _pilot?.SetVisual(!_previewFlight && Preference.ShowDroneVisual,
-                Preference.ShellColor);
+            _cameraOperator?.Update(player.GetVelocity(), player.m_runSpeed);
         }
 
         // Returns whether the current camera has an unobstructed player view.
         internal bool HasTargetVisibility()
         {
             Player player = Player.m_localPlayer;
-            if (!_flightEnabled || player == null)
+            if (!_movementEnabled || player == null)
             {
                 return false;
             }
-            Vector3 focus = player.transform.position + Vector3.up * 1.60f;
+            Vector3 focus = PlayerFocus(player);
             Vector3 viewport = _camera.WorldToViewportPoint(focus);
             return viewport.z > 0f && viewport.x >= 0f && viewport.x <= 1f &&
                    viewport.y >= 0f && viewport.y <= 1f &&
@@ -178,58 +112,105 @@ namespace Landoria.SagaCapture
         internal bool TryCutViewpoint(bool renderImmediately)
         {
             Player player = Player.m_localPlayer;
-            if (!_flightEnabled || player == null)
+            if (!_movementEnabled || player == null)
             {
                 return false;
             }
-            Vector3 focus = player.transform.position + Vector3.up * 1.60f;
-            Vector3 radial = _camera.transform.position - focus;
-            radial.y = 0f;
-            if (radial.sqrMagnitude < 0.01f)
-            {
-                radial = -player.transform.forward;
-            }
+            Vector3 focus = PlayerFocus(player);
             for (int index = 0; index < ViewpointCandidateCount; index++)
             {
                 Vector3 position = CreateViewpoint(
-                    focus, radial.normalized, player);
+                    focus, player);
                 if (!IsTargetVisible(position, player))
                 {
                     continue;
                 }
-                _pilot?.Reposition(position);
+                _cameraOperator?.Reposition(position, player.GetVelocity());
                 if (renderImmediately)
                 {
                     _camera.Render();
                 }
-                ScheduleViewpointCut();
                 return true;
             }
-            ScheduleViewpointCut();
             return false;
         }
 
         // Generates one substantially different position around the player.
-        private static Vector3 CreateViewpoint(
-            Vector3 focus, Vector3 radial, Player player)
+        private Vector3 CreateViewpoint(
+            Vector3 focus, Player player)
         {
-            float angle = Random.Range(110f, 250f);
-            Vector3 direction = Quaternion.Euler(0f, angle, 0f) * radial;
+            string zone = SelectHorizontalZone();
+            Vector3 direction = CreateViewDirection(player, zone);
             float radius = Random.Range(
-                NearViewpointRadius, DistantViewpointRadius);
+                PlacementSetting("minimum_distance"),
+                PlacementSetting("maximum_distance"));
             Vector3 position = focus + direction * radius;
-            float ground = ValheimDroneAdapter.GroundHeight(position) ??
+            float ground = ValheimCameraAdapter.GroundHeight(position) ??
                            player.transform.position.y;
             float amount = Mathf.InverseLerp(
-                NearViewpointRadius, DistantViewpointRadius, radius);
-            position.y = Mathf.Max(focus.y, ground + Mathf.Lerp(2f, 4f, amount));
+                PlacementSetting("minimum_distance"),
+                PlacementSetting("maximum_distance"), radius);
+            float maximumHeight = Mathf.Min(
+                PlacementSetting("maximum_height"),
+                _cameraOperator.MaximumHeight);
+            position.y = Mathf.Max(focus.y, ground + Mathf.Lerp(
+                PlacementSetting("minimum_height"),
+                maximumHeight, amount));
             return position;
+        }
+
+        // Reads one placement limit from CameraOperator's live configuration.
+        private float PlacementSetting(string path)
+        {
+            return _cameraOperator.Settings.Number("positioning." + path);
+        }
+
+        // Returns the operator-configured point of interest on the player.
+        private Vector3 PlayerFocus(Player player)
+        {
+            return player.transform.position +
+                Vector3.up * _cameraOperator.TargetHeight;
+        }
+
+        // Selects one horizontal cut zone allowed by the output mode.
+        private static string SelectHorizontalZone()
+        {
+            return Random.value < 0.5f ? "front" : "lateral";
+        }
+
+        // Chooses a direction inside one player-relative cut zone.
+        private Vector3 CreateViewDirection(Player player, string zone)
+        {
+            Vector3 forward = player.transform.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.01f)
+            {
+                forward = Vector3.forward;
+            }
+            float angle = CreateViewAngle(zone);
+            return Quaternion.Euler(0f, angle, 0f) * forward.normalized;
+        }
+
+        // Generates an angle for front, lateral, or rear framing.
+        private float CreateViewAngle(string zone)
+        {
+            float variation = PlacementSetting("angle_variation");
+            if (zone == "front")
+            {
+                return Random.Range(-variation, variation);
+            }
+            if (zone == "rear")
+            {
+                return 180f + Random.Range(-variation, variation);
+            }
+            float side = Random.value < 0.5f ? -1f : 1f;
+            return side * (90f + Random.Range(-variation, variation));
         }
 
         // Tests the frame and physical line of sight from one camera position.
         private bool IsTargetVisible(Vector3 position, Player player)
         {
-            Vector3 focus = player.transform.position + Vector3.up * 1.60f;
+            Vector3 focus = PlayerFocus(player);
             Vector3 direction = focus - position;
             RaycastHit[] hits = Physics.RaycastAll(position,
                 direction.normalized, direction.magnitude,
@@ -243,35 +224,21 @@ namespace Landoria.SagaCapture
             return true;
         }
 
-        // Chooses the next unsynchronized viewpoint-cut time.
-        private void ScheduleViewpointCut()
-        {
-            _nextViewpointCut = Time.time +
-                Random.Range(MinimumCutInterval, MaximumCutInterval);
-        }
-
-        // Restores listeners and destroys the secondary camera.
+        // Releases rendering resources and destroys the secondary camera.
         internal void Dispose()
         {
-            _pilot?.Dispose();
-            _pilot = null;
+            _cameraOperator?.Dispose();
+            _cameraOperator = null;
             EndOffscreenRendering();
-            _mainCamera.Restore(_camera);
-            if (_originalListener != null)
-            {
-                _originalListener.enabled = true;
-                _originalListener = null;
-            }
             if (_camera != null)
             {
                 Destroy(_camera.gameObject);
                 _camera = null;
-                _listener = null;
                 _effects.Clear();
             }
         }
 
-        // Copies the gameplay camera pose without introducing flight behavior.
+        // Copies the gameplay camera pose without introducing movement behavior.
         private void SynchronizePose()
         {
             if (_sourceCamera == null || _camera == null)
@@ -281,17 +248,6 @@ namespace Landoria.SagaCapture
             _camera.transform.SetPositionAndRotation(
                 _sourceCamera.transform.position,
                 _sourceCamera.transform.rotation);
-        }
-
-        // Moves active listening to the preview camera.
-        private void TransferAudio(Camera sourceCamera, GameObject target)
-        {
-            _originalListener = SagaCaptureAudioListener.FindActive(sourceCamera);
-            if (_originalListener != null)
-            {
-                _originalListener.enabled = false;
-            }
-            _listener = target.AddComponent<AudioListener>();
         }
 
         // Stops offscreen rendering and releases its texture.

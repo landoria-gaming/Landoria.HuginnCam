@@ -3,13 +3,12 @@
   <Target Name="MergeSagaCaptureDependencies" AfterTargets="Build">
     <PropertyGroup>
       <SagaMergedAssembly>$(IntermediateOutputPath)$(TargetName).merged$(TargetExt)</SagaMergedAssembly>
-      <DronePilotOutput>$(MSBuildProjectDirectory)\..\DronePilot\bin\$(Configuration)\net48</DronePilotOutput>
+      <CameraOperatorOutput>$(MSBuildProjectDirectory)\..\CameraOperator\bin\$(Configuration)\net48</CameraOperatorOutput>
     </PropertyGroup>
     <ItemGroup>
       <SagaAssembliesToMerge Include="$(IntermediateOutputPath)$(TargetFileName)" />
-      <SagaAssembliesToMerge Include="$(DronePilotOutput)\DronePilot.dll" />
-      <SagaAssembliesToMerge Include="$(DronePilotOutput)\YamlDotNet.dll" />
-      <SagaAssembliesToMerge Include="$(DronePilotOutput)\Newtonsoft.Json.dll" />
+      <SagaAssembliesToMerge Include="$(CameraOperatorOutput)\CameraOperator.dll" />
+      <SagaAssembliesToMerge Include="$(CameraOperatorOutput)\YamlDotNet.dll" />
       <SagaAssembliesToMerge Include="$(MSBuildProjectDirectory)\lib\UnityRuntimeCameraRecorder.dll" />
       <SagaAssembliesToMerge Include="$(MSBuildProjectDirectory)\lib\FFmpegMediaWriter.dll" />
     </ItemGroup>
@@ -18,7 +17,7 @@
     <ILRepack InputAssemblies="@(SagaAssembliesToMerge)"
               OutputFile="$(SagaMergedAssembly)"
               TargetKind="SameAsPrimaryAssembly"
-              LibraryPath="$(UnityManagedPath);$(BepInExPath)\core;$(DronePilotOutput);$(MSBuildProjectDirectory)\lib"
+              LibraryPath="$(UnityManagedPath);$(BepInExPath)\core;$(CameraOperatorOutput);$(MSBuildProjectDirectory)\lib"
               Internalize="true"
               DebugInfo="true"
               Parallel="true" />
@@ -26,6 +25,6 @@
     <Copy SourceFiles="$(IntermediateOutputPath)$(TargetName).merged.pdb"
           DestinationFiles="$(TargetDir)$(TargetName).pdb"
           Condition="Exists('$(IntermediateOutputPath)$(TargetName).merged.pdb')" />
-    <Delete Files="$(TargetDir)DronePilot.dll;$(TargetDir)DronePilot.pdb;$(TargetDir)YamlDotNet.dll;$(TargetDir)Newtonsoft.Json.dll;$(TargetDir)UnityRuntimeCameraRecorder.dll;$(TargetDir)FFmpegMediaWriter.dll" />
+    <Delete Files="$(TargetDir)CameraOperator.dll;$(TargetDir)CameraOperator.pdb;$(TargetDir)YamlDotNet.dll;$(TargetDir)UnityRuntimeCameraRecorder.dll;$(TargetDir)FFmpegMediaWriter.dll" />
   </Target>
 </Project>

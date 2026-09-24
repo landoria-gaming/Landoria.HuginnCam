@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using DronePilot;
+using CameraOperator;
 using UnityEngine;
 
 namespace Landoria.SagaCapture
 {
-    // Adapts Valheim terrain, objects, and forest density to generic drone inputs.
-    internal sealed class ValheimDroneAdapter
+    // Adapts Valheim terrain, objects, and forest density to generic camera inputs.
+    internal sealed class ValheimCameraAdapter
     {
         private static readonly string[] LightVegetationNames =
         {
@@ -18,9 +18,9 @@ namespace Landoria.SagaCapture
         private bool _forest;
 
         // Provides game-specific callbacks without leaking Valheim types.
-        internal DroneWorld CreateWorld()
+        internal CameraWorld CreateWorld()
         {
-            return new DroneWorld
+            return new CameraWorld
             {
                 GroundHeight = GroundHeight,
                 IgnoreObstacle = IgnoreObstacle,
@@ -32,14 +32,14 @@ namespace Landoria.SagaCapture
         }
 
         // Provides forest first, then an unconditional open-area fallback.
-        internal PilotProfile[] CreateProfiles()
+        internal CameraProfile[] CreateProfiles()
         {
             return new[]
             {
-                new PilotProfile("Forest", Preference.ForestMaximumHeight,
-                    Preference.ForestMaximumOrbitRadius, IsForest),
-                new PilotProfile("OpenArea", Preference.OpenMaximumHeight,
-                    Preference.OpenMaximumOrbitRadius, position => true)
+                new CameraProfile("Forest", Preference.ForestMaximumHeight,
+                    IsForest),
+                new CameraProfile("OpenArea", Preference.OpenMaximumHeight,
+                    position => true)
             };
         }
 
@@ -73,7 +73,7 @@ namespace Landoria.SagaCapture
             return false;
         }
 
-        // Uses a cached count of distinct Valheim trees near the drone.
+        // Uses a cached count of distinct Valheim trees near the camera.
         private bool IsForest(Vector3 position)
         {
             if (Time.time < _nextTreeScan) return _forest;

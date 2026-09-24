@@ -6,8 +6,8 @@ using Recorder = UnityRuntimeCameraRecorder.UnityRuntimeCameraRecorder;
 
 namespace Landoria.SagaCapture
 {
-    // Records the secondary camera while gameplay remains visible.
-    internal sealed class RecordingController : MonoBehaviour
+    // Directs shot selection and owns the recording lifecycle.
+    internal sealed class ShotDirector : MonoBehaviour
     {
         private const int AntiAliasingSamples = 1;
         private const int MinimumWarmupFrames = 8;
@@ -19,27 +19,43 @@ namespace Landoria.SagaCapture
         private Recorder _recorder;
         private Coroutine _warmupRoutine;
         private AudioListener _gameplayListener;
+        private SagaCaptureGameplayCapture _gameplayCapture;
+        private SagaCaptureVideoSource _videoSource;
         private string _outputPath;
         private float _targetLostSince = -1f;
+        private float _nextShotAt;
         private readonly SagaCaptureFrameRateLimit _frameRateLimit =
             new SagaCaptureFrameRateLimit();
 
         internal bool IsActive => _recorder != null || _warmupRoutine != null;
-        internal bool IsCameraActive => _cameraRig?.IsFlying == true;
-        internal bool IsDroneImageActive =>
+        internal bool IsCameraActive => _cameraRig?.IsMoving == true;
+        internal bool IsCinematicImageActive =>
             _recorder?.IsCapturing == true &&
-            _recorder.ActiveVideoSourceIndex == 0;
+            _videoSource?.IsCinematic == true;
 
-        // Forces gameplay when the active drone view loses the player.
+        // Applies mod-owned cuts and protects recordings from lost framing.
         private void Update()
         {
-            if (_recorder?.IsCapturing != true ||
-                Preference.Content != OutputContent.DroneAndGameplay)
+            if (_recorder?.IsCapturing != true)
             {
                 return;
             }
-            if (_recorder.ActiveVideoSourceIndex != 0 ||
-                _cameraRig?.HasTargetVisibility() == true)
+            if (Time.time >= _nextShotAt)
+            {
+                CutToNextSource();
+            }
+            CheckCinematicVisibility();
+        }
+
+        // Forces gameplay after the cinematic camera loses the player.
+        private void CheckCinematicVisibility()
+        {
+            if (_videoSource?.IsCinematic != true)
+            {
+                _targetLostSince = -1f;
+                return;
+            }
+            if (_cameraRig?.HasTargetVisibility() == true)
             {
                 _targetLostSince = -1f;
                 return;
@@ -47,14 +63,10 @@ namespace Landoria.SagaCapture
             if (_targetLostSince < 0f)
             {
                 _targetLostSince = Time.time;
-                return;
             }
-            if (Time.time - _targetLostSince >= TargetLossGraceSeconds)
+            else if (Time.time - _targetLostSince >= TargetLossGraceSeconds)
             {
-                _recorder.SetActiveVideoSourceIndex(1);
-                _targetLostSince = -1f;
-                SagaCapturePlugin.Log.LogInfo(
-                    "Drone target occluded; switched to gameplay.");
+                ActivateGameplay("Cinematic target occluded; cut to gameplay.");
             }
         }
 
@@ -128,7 +140,14 @@ namespace Landoria.SagaCapture
                 _recorder = gameObject.AddComponent<Recorder>();
                 _targetLostSince = -1f;
                 SubscribeRecorder();
-                _cameraRig.BeginFlight();
+                _cameraRig.BeginMovement();
+                if (!_cameraRig.TryCutViewpoint(false))
+                {
+                    SagaCapturePlugin.Log.LogWarning(
+                        "Initial cinematic cut has no visible viewpoint.");
+                }
+                _videoSource.SetCinematic(true);
+                ScheduleNextCut();
                 _recorder.StartRecording(
                     CreateSequence(), _gameplayListener,
                     CreateSettings(_outputPath));
@@ -164,61 +183,69 @@ namespace Landoria.SagaCapture
                 out int renderWidth, out int renderHeight,
                 out FilterMode filterMode);
             _cameraRig = gameObject.AddComponent<SagaCaptureRig>();
-            _cameraRig.Initialize(gameplayCamera, false, graphicsSettings);
+            _cameraRig.Initialize(gameplayCamera, graphicsSettings);
             _cameraRig.BeginWarmup(
                 renderWidth, renderHeight, AntiAliasingSamples, filterMode);
+            _videoSource = gameObject.AddComponent<SagaCaptureVideoSource>();
+            _videoSource.Initialize(_cameraRig.Camera,
+                _cameraRig.OutputTexture, Preference.GameplayIncludeUi);
+            _gameplayCapture = gameplayCamera.gameObject
+                .AddComponent<SagaCaptureGameplayCapture>();
+            _gameplayCapture.Initialize(_videoSource);
             SagaCaptureCameraLogger.LogEffectiveConfiguration(
                 "CaptureMode", gameplayCamera, _cameraRig.Camera,
                 GraphicsSettingsManager.Instance.ActiveSettings,
                 graphicsSettings);
         }
 
-        // Creates the configured drone-only or alternating camera sequence.
+        // Exposes one stable texture; SagaCapture performs all source cuts.
         private UnityRuntimeCameraRecorder.VideoSequenceSettings CreateSequence()
         {
-            var drone = UnityRuntimeCameraRecorder.VideoSequenceSource
-                .FromCamera(_cameraRig.Camera);
-            if (Preference.Content == OutputContent.DroneOnly)
-            {
-                return new UnityRuntimeCameraRecorder.VideoSequenceSettings
-                {
-                    Sources = new[] { drone }
-                };
-            }
-
             return new UnityRuntimeCameraRecorder.VideoSequenceSettings
             {
-                Sources = new[]
-                {
-                    drone,
-                    UnityRuntimeCameraRecorder.VideoSequenceSource
-                        .FromScreen(false)
-                },
-                Order = UnityRuntimeCameraRecorder.VideoSequenceOrder.Sequential,
-                MinimumShotDurationSeconds = MinimumShotDurationSeconds,
-                MaximumShotDurationSeconds = MaximumShotDurationSeconds,
-                Transitions = new[]
-                {
-                    UnityRuntimeCameraRecorder.VideoSequenceTransition.NoTransition
-                },
-                CanActivateSource = CanActivateVideoSource
+                Sources = new[] { UnityRuntimeCameraRecorder
+                    .VideoSequenceSource.FromTexture(_videoSource.Texture) }
             };
         }
 
-        // Allows drone activation only after finding a visible camera position.
-        private bool CanActivateVideoSource(int sourceIndex)
+        // Alternates the image written to the recorder's single texture.
+        private void CutToNextSource()
         {
-            if (sourceIndex != 0)
+            if (_videoSource.IsCinematic)
             {
-                return true;
+                ActivateGameplay("Gameplay shot activated.");
+                return;
             }
             bool visible = _cameraRig?.TryCutViewpoint(true) == true;
             if (!visible)
             {
                 SagaCapturePlugin.Log.LogInfo(
-                    "Drone return postponed: no visible target viewpoint.");
+                    "Cinematic cut postponed: no visible target viewpoint.");
             }
-            return visible;
+            else
+            {
+                _videoSource.SetCinematic(true);
+                _targetLostSince = -1f;
+                SagaCapturePlugin.Log.LogInfo(
+                    "Cinematic shot activated with a new viewpoint.");
+            }
+            ScheduleNextCut();
+        }
+
+        // Selects gameplay immediately and schedules the next mod-owned cut.
+        private void ActivateGameplay(string logMessage)
+        {
+            _videoSource.SetCinematic(false);
+            _targetLostSince = -1f;
+            ScheduleNextCut();
+            SagaCapturePlugin.Log.LogInfo(logMessage);
+        }
+
+        // Chooses the duration of the current shot independently of the recorder.
+        private void ScheduleNextCut()
+        {
+            _nextShotAt = Time.time + UnityEngine.Random.Range(
+                MinimumShotDurationSeconds, MaximumShotDurationSeconds);
         }
 
         // Creates the encoder and output configuration.
@@ -332,11 +359,23 @@ namespace Landoria.SagaCapture
         // Releases the offscreen camera.
         private void ReleaseCamera()
         {
+            if (_videoSource != null)
+            {
+                _videoSource.Dispose();
+                Destroy(_videoSource);
+                _videoSource = null;
+            }
             if (_cameraRig != null)
             {
                 _cameraRig.Dispose();
                 Destroy(_cameraRig);
                 _cameraRig = null;
+            }
+            if (_gameplayCapture != null)
+            {
+                _gameplayCapture.Dispose();
+                Destroy(_gameplayCapture);
+                _gameplayCapture = null;
             }
             _frameRateLimit.Restore("CaptureMode");
         }

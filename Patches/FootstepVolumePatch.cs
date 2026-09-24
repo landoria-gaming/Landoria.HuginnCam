@@ -11,7 +11,7 @@ namespace Landoria.SagaCapture
         // Applies the reduction after Valheim has initialized the step effect.
         private static void Postfix(UnityEngine.GameObject go)
         {
-            if (!SagaCapturePlugin.IsDroneImageActive)
+            if (!SagaCapturePlugin.IsCinematicImageActive)
             {
                 return;
             }

@@ -14,28 +14,23 @@ namespace Landoria.SagaCapture
         private const string PluginGuid = "Landoria.SagaCapture";
         private const string PluginName = "Landoria.SagaCapture";
         private const string PluginVersion = "1.0.0";
-        private SagaCaptureController _cameraController;
-        private RecordingController _recordingController;
+        private ShotDirector _shotDirector;
         private InterruptedRecordingRecovery _recordingRecovery;
         private Harmony _harmony;
         private static SagaCapturePlugin _instance;
         internal static ManualLogSource Log { get; private set; }
-        internal static bool IsPreviewModeActive =>
-            _instance?._cameraController?.IsActive == true;
-        internal static bool IsDroneCameraActive =>
-            IsPreviewModeActive ||
-            _instance?._recordingController?.IsCameraActive == true;
-        internal static bool IsDroneImageActive =>
-            IsPreviewModeActive ||
-            _instance?._recordingController?.IsDroneImageActive == true;
+        internal static bool IsCinematicCameraActive =>
+            _instance?._shotDirector?.IsCameraActive == true;
+        internal static bool IsCinematicImageActive =>
+            _instance?._shotDirector?.IsCinematicImageActive == true;
 
         // Stops an active recording before a menu exit action continues.
         internal static void StopRecordingForMenuExit()
         {
-            if (_instance?._recordingController?.IsActive == true)
+            if (_instance?._shotDirector?.IsActive == true)
             {
                 Log.LogInfo("Stopping recording before leaving the game.");
-                _instance._recordingController.StopRecording();
+                _instance._shotDirector.StopRecording();
             }
         }
 
@@ -49,8 +44,7 @@ namespace Landoria.SagaCapture
             ConfigWatcher.Initialize(
                 Config, Logger, "Saga Capture",
                 () => Preference.RestoreDefaults(Config));
-            _cameraController = gameObject.AddComponent<SagaCaptureController>();
-            _recordingController = gameObject.AddComponent<RecordingController>();
+            _shotDirector = gameObject.AddComponent<ShotDirector>();
             _recordingRecovery =
                 gameObject.AddComponent<InterruptedRecordingRecovery>();
             _harmony = new Harmony(PluginGuid);
@@ -58,42 +52,24 @@ namespace Landoria.SagaCapture
             Log.LogInfo($"{PluginName} {PluginVersion} is loaded.");
         }
 
-        // Reloads configuration and handles camera and recording controls.
+        // Reloads configuration and handles the recording control.
         private void Update()
         {
             ConfigWatcher.Update();
-            bool escapePressed = ZInput.GetKeyDown(KeyCode.Escape);
             bool captureKeyPressed =
                 IsMainKeyDown(Preference.CaptureModeShortcut);
-            if (_cameraController.IsActive)
-            {
-                if (escapePressed)
-                {
-                    SagaCaptureMenuPatch.SuppressThisFrame();
-                }
-                if (escapePressed || captureKeyPressed)
-                {
-                    _cameraController.ToggleCamera();
-                }
-                return;
-            }
-
-            if (_recordingController.IsActive)
+            if (_shotDirector.IsActive)
             {
                 if (captureKeyPressed)
                 {
-                    _recordingController.StopRecording();
+                    _shotDirector.StopRecording();
                 }
                 return;
             }
 
-            if (IsShortcutDown(Preference.PreviewModeShortcut))
+            if (IsShortcutDown(Preference.CaptureModeShortcut))
             {
-                _cameraController.ToggleCamera();
-            }
-            else if (IsShortcutDown(Preference.CaptureModeShortcut))
-            {
-                _recordingController.StartRecording();
+                _shotDirector.StartRecording();
             }
         }
 
@@ -143,12 +119,10 @@ namespace Landoria.SagaCapture
             ConfigWatcher.Dispose();
             _harmony?.UnpatchSelf();
             _harmony = null;
-            _recordingController?.Shutdown();
-            _recordingController = null;
+            _shotDirector?.Shutdown();
+            _shotDirector = null;
             _recordingRecovery?.Shutdown();
             _recordingRecovery = null;
-            _cameraController?.Shutdown();
-            _cameraController = null;
             Log?.LogInfo($"{PluginName} {PluginVersion} is unloaded.");
             Log = null;
             _instance = null;
