@@ -6,6 +6,8 @@ whole video. It switches between the gameplay camera and a moving cinematic
 camera that follows your character, frames the action, and avoids terrain and
 obstacles.
 
+[Watch SagaCapture in action on YouTube](https://youtu.be/_2L1In2dieM)
+
 ## Requirements
 
 - Windows x64.
