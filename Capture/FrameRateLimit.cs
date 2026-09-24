@@ -10,9 +10,10 @@ namespace Landoria.SagaCapture
         private bool _applied;
 
         // Applies the configured camera limit and disables conflicting VSync.
-        internal void Apply(string mode, int maximumFrameRate)
+        internal void Apply(
+            string mode, int maximumFrameRate, bool limitGameFrameRate)
         {
-            if (_applied)
+            if (_applied || !limitGameFrameRate)
             {
                 return;
             }

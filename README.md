@@ -55,11 +55,12 @@ BepInEx/config/Landoria.SagaCapture.cfg
 | Section | Setting | Default | Description |
 | --- | --- | --- | --- |
 | `Controls` | `CaptureModeShortcut` | `F8` | Starts or stops Capture Mode. |
-| `CinematicCameraRendering` | `MaximumFrameRate` | `60` | Limits capture to `30` or `60` FPS. |
+| `CinematicCameraRendering` | `MaximumFrameRate` | `60` | Sets `30`, `60`, or `SameAsGame`. The latter preserves the game's VSync and frame-rate limit while recording at up to 60 FPS. |
+| `CinematicCameraRendering` | `ShowFrameRate` | `false` | Shows the cinematic-camera FPS counter in the top-left corner. |
 | `Recording` | `Quality` | `Medium` | Sets the recording quality to `Low`, `Medium`, `High`, or `Highest`. Lower values reduce file size and encoding load. |
 | `GameplayCamera` | `IncludeUI` | `true` | Includes the Valheim interface in gameplay shots. |
-| `Director` | `MinimumShotDuration` | `5` | Sets the minimum shot duration in seconds. |
-| `Director` | `MaximumShotDuration` | `10` | Sets the maximum shot duration in seconds. |
+| `Director` | `MinimumShotDuration` | `8` | Sets the minimum shot duration in seconds. |
+| `Director` | `MaximumShotDuration` | `15` | Sets the maximum shot duration in seconds. |
 
 ## Performance recommendation
 

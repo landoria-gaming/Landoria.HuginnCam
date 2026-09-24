@@ -43,7 +43,10 @@ namespace Landoria.SagaCapture
         internal void BeginMovement()
         {
             SynchronizePose();
-            _camera.gameObject.AddComponent<SagaCaptureFrameRateDisplay>();
+            if (Preference.ShowFrameRate)
+            {
+                _camera.gameObject.AddComponent<SagaCaptureFrameRateDisplay>();
+            }
             Player player = Player.m_localPlayer;
             if (player == null)
             {

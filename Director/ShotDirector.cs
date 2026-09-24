@@ -83,7 +83,8 @@ namespace Landoria.SagaCapture
                 Camera gameplayCamera = Camera.main;
                 ValidateGameplayCamera(gameplayCamera);
                 _frameRateLimit.Apply(
-                    "CaptureMode", Preference.CameraMaximumFrameRate);
+                    "CaptureMode", Preference.CameraMaximumFrameRate,
+                    Preference.LimitGameFrameRate);
                 PrepareCamera(gameplayCamera);
                 _outputPath = CreateOutputPath();
                 _warmupRoutine = StartCoroutine(WarmupThenStart());

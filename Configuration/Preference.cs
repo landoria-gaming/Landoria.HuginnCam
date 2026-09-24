@@ -10,7 +10,8 @@ namespace Landoria.SagaCapture
     internal static class Preference
     {
         private static ConfigEntry<KeyboardShortcut> captureModeShortcut;
-        private static ConfigEntry<int> cameraMaximumFrameRate;
+        private static ConfigEntry<string> cameraFrameRate;
+        private static ConfigEntry<bool> showFrameRate;
         private static ConfigEntry<
             UnityRuntimeCameraRecorder.RecordingQualityPreset> recordingQuality;
         private static ConfigEntry<bool> gameplayIncludeUi;
@@ -26,7 +27,10 @@ namespace Landoria.SagaCapture
         internal static UnityRuntimeCameraRecorder.RecordingQualityPreset
             RecordingQuality => recordingQuality.Value;
         internal static int CameraMaximumFrameRate =>
-            cameraMaximumFrameRate.Value;
+            cameraFrameRate.Value == "30" ? 30 : 60;
+        internal static bool LimitGameFrameRate =>
+            cameraFrameRate.Value != "SameAsGame";
+        internal static bool ShowFrameRate => showFrameRate.Value;
         internal static bool GameplayIncludeUi => gameplayIncludeUi.Value;
         internal static float MinimumShotDuration => minimumShotDuration.Value;
         internal static float MaximumShotDuration => Mathf.Max(
@@ -43,14 +47,17 @@ namespace Landoria.SagaCapture
                 new KeyboardShortcut(KeyCode.F8),
                 "Shortcut used to enter or leave CaptureMode.\n" +
                 "\nhttps://docs.unity3d.com/ScriptReference/KeyCode.html");
-            cameraMaximumFrameRate = config.Bind(
-                "CinematicCameraRendering", "MaximumFrameRate", 60,
+            cameraFrameRate = config.Bind(
+                "CinematicCameraRendering", "MaximumFrameRate", "60",
                 new ConfigDescription(
-                    "Frame rate shared by CaptureMode, the " +
-                    "Unity game loop, and the video recorder: 30 or 60 FPS. " +
-                    "VSync is temporarily disabled so Unity does not render " +
-                    "more frames than the recorder accepts.",
-                    new AcceptableValueList<int>(30, 60)));
+                    "Capture frame rate: 30, 60, or SameAsGame. " +
+                    "SameAsGame preserves the game's VSync and frame-rate " +
+                    "limit while recording video at up to 60 FPS.",
+                    new AcceptableValueList<string>(
+                        "30", "60", "SameAsGame")));
+            showFrameRate = config.Bind(
+                "CinematicCameraRendering", "ShowFrameRate", false,
+                "Show the cinematic-camera frame rate in the top-left corner.");
             recordingQuality = config.Bind(
                 "Recording", "Quality",
                 UnityRuntimeCameraRecorder.RecordingQualityPreset.Medium,
@@ -67,11 +74,11 @@ namespace Landoria.SagaCapture
         private static void InitializeDirector(ConfigFile config)
         {
             minimumShotDuration = config.Bind(
-                "Director", "MinimumShotDuration", 5f,
+                "Director", "MinimumShotDuration", 8f,
                 new ConfigDescription("Minimum shot duration in seconds.",
                     new AcceptableValueRange<float>(1f, 60f)));
             maximumShotDuration = config.Bind(
-                "Director", "MaximumShotDuration", 10f,
+                "Director", "MaximumShotDuration", 15f,
                 new ConfigDescription("Maximum shot duration in seconds.",
                     new AcceptableValueRange<float>(1f, 120f)));
         }
@@ -80,12 +87,13 @@ namespace Landoria.SagaCapture
         internal static void RestoreDefaults(ConfigFile config)
         {
             captureModeShortcut.Value = new KeyboardShortcut(KeyCode.F8);
-            cameraMaximumFrameRate.Value = 60;
+            cameraFrameRate.Value = "60";
+            showFrameRate.Value = false;
             recordingQuality.Value =
                 UnityRuntimeCameraRecorder.RecordingQualityPreset.Medium;
             gameplayIncludeUi.Value = true;
-            minimumShotDuration.Value = 5f;
-            maximumShotDuration.Value = 10f;
+            minimumShotDuration.Value = 8f;
+            maximumShotDuration.Value = 15f;
             config.Save();
             Landoria.Shared.ConfigWatcher.IgnoreCurrentFileVersion();
         }
