@@ -44,7 +44,7 @@ namespace Landoria.SagaCapture
                 };
             }
             GUI.Label(new Rect(8f, 6f, 300f, 55f),
-                $"Saga {Mathf.RoundToInt(_framesPerSecond)} FPS", _style);
+                $"{Mathf.RoundToInt(_framesPerSecond)} FPS", _style);
         }
     }
 }

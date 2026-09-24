@@ -26,20 +26,9 @@ namespace Landoria.SagaCapture
                 IgnoreObstacle = IgnoreObstacle,
                 IsActor = collider =>
                     collider.GetComponentInParent<Character>() != null,
+                LogDebug = message => SagaCapturePlugin.Log.LogDebug(message),
                 LogInfo = message => SagaCapturePlugin.Log.LogInfo(message),
                 LogWarning = message => SagaCapturePlugin.Log.LogWarning(message)
-            };
-        }
-
-        // Provides forest first, then an unconditional open-area fallback.
-        internal CameraProfile[] CreateProfiles()
-        {
-            return new[]
-            {
-                new CameraProfile("Forest", Preference.ForestMaximumHeight,
-                    IsForest),
-                new CameraProfile("OpenArea", Preference.OpenMaximumHeight,
-                    position => true)
             };
         }
 
@@ -74,7 +63,7 @@ namespace Landoria.SagaCapture
         }
 
         // Uses a cached count of distinct Valheim trees near the camera.
-        private bool IsForest(Vector3 position)
+        internal bool IsForest(Vector3 position)
         {
             if (Time.time < _nextTreeScan) return _forest;
             _nextTreeScan = Time.time + Preference.TreeScanIntervalSeconds;

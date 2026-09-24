@@ -16,7 +16,7 @@ namespace Landoria.SagaCapture
             {
                 return;
             }
-            SagaCapturePlugin.Log.LogInfo(
+            SagaCapturePlugin.Log.LogDebug(
                 $"{mode} effective camera configuration:");
             LogCamera("Game", source, sourceSettings,
                 Application.targetFrameRate,
@@ -31,7 +31,7 @@ namespace Landoria.SagaCapture
             GraphicsSettingsState settings, int maximumFrameRate, bool vSync)
         {
             GetPixels(camera, out int width, out int height);
-            SagaCapturePlugin.Log.LogInfo(string.Format(
+            SagaCapturePlugin.Log.LogDebug(string.Format(
                 CultureInfo.InvariantCulture,
                 "  {0}: pixels={1}x{2}, maximumFrameRate={3}, FOV={4:F1}, " +
                 "aspect={5:F3}, clip={6:F2}-{7:F1}m, " +
@@ -47,7 +47,7 @@ namespace Landoria.SagaCapture
         private static void LogQualitySettings(string label,
             GraphicsSettingsState settings)
         {
-            SagaCapturePlugin.Log.LogInfo(
+            SagaCapturePlugin.Log.LogDebug(
                 $"  {label} quality: vegetation={settings.m_vegetation}, " +
                 $"LOD={settings.m_lod}, particleLights={settings.m_lights}, " +
                 $"shadowQuality={settings.m_shadowQuality}, " +
@@ -55,7 +55,7 @@ namespace Landoria.SagaCapture
                 $"pointLightShadows={settings.m_pointLightShadows}, " +
                 $"SSAO={settings.m_ssao}, clothQuality={settings.m_clothQuality}, " +
                 $"drawDistance={settings.m_simulationDistance}.");
-            SagaCapturePlugin.Log.LogInfo(
+            SagaCapturePlugin.Log.LogDebug(
                 $"  {label} effects: distantShadows={settings.m_distantShadows}, " +
                 $"tessellation={settings.m_tesselation}, bloom={settings.m_bloom}, " +
                 $"depthOfField={settings.m_depthOfField}, " +

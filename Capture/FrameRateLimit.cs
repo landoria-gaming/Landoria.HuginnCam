@@ -21,7 +21,7 @@ namespace Landoria.SagaCapture
             QualitySettings.vSyncCount = 0;
             Application.targetFrameRate = maximumFrameRate;
             _applied = true;
-            SagaCapturePlugin.Log.LogInfo(
+            SagaCapturePlugin.Log.LogDebug(
                 $"{mode} frame-rate limit applied: " +
                 $"{maximumFrameRate} FPS " +
                 $"(previous target={_originalTargetFrameRate}, " +
@@ -38,7 +38,7 @@ namespace Landoria.SagaCapture
             Application.targetFrameRate = _originalTargetFrameRate;
             QualitySettings.vSyncCount = _originalVSyncCount;
             _applied = false;
-            SagaCapturePlugin.Log.LogInfo(
+            SagaCapturePlugin.Log.LogDebug(
                 $"{mode} restored game frame-rate state: " +
                 $"target={_originalTargetFrameRate}, " +
                 $"vSyncCount={_originalVSyncCount}.");

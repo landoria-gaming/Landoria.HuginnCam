@@ -10,9 +10,9 @@ namespace Landoria.SagaCapture
         private Camera _sourceCamera;
         private RenderTexture _offscreenTarget;
         private CameraOperatorController _cameraOperator;
+        private ValheimCameraAdapter _adapter;
         private readonly SagaCaptureEffects _effects = new SagaCaptureEffects();
         private bool _movementEnabled;
-        private const int ViewpointCandidateCount = 4;
 
         internal Camera Camera => _camera;
         internal RenderTexture OutputTexture => _offscreenTarget;
@@ -50,10 +50,10 @@ namespace Landoria.SagaCapture
                 throw new System.InvalidOperationException(
                     "The local player is unavailable.");
             }
-            var adapter = new ValheimCameraAdapter();
+            _adapter = new ValheimCameraAdapter();
             _cameraOperator = new CameraOperatorController(
                 _camera, player.gameObject, Preference.CameraOperatorConfigPath,
-                adapter.CreateWorld(), adapter.CreateProfiles());
+                _adapter.CreateWorld());
             _movementEnabled = true;
         }
 
@@ -108,54 +108,48 @@ namespace Landoria.SagaCapture
                    IsTargetVisible(_camera.transform.position, player);
         }
 
-        // Cuts to a visible random viewpoint, optionally rendering it now.
-        internal bool TryCutViewpoint(bool renderImmediately)
+        // Tries one director-selected viewpoint and optionally renders it now.
+        internal bool TryCutViewpoint(
+            CameraPlacement placement, bool renderImmediately)
         {
             Player player = Player.m_localPlayer;
             if (!_movementEnabled || player == null)
             {
                 return false;
             }
-            Vector3 focus = PlayerFocus(player);
-            for (int index = 0; index < ViewpointCandidateCount; index++)
+            Vector3 position = CreateViewpoint(PlayerFocus(player), player,
+                placement);
+            if (!IsTargetVisible(position, player))
             {
-                Vector3 position = CreateViewpoint(
-                    focus, player);
-                if (!IsTargetVisible(position, player))
-                {
-                    continue;
-                }
-                _cameraOperator?.Reposition(position, player.GetVelocity());
-                if (renderImmediately)
-                {
-                    _camera.Render();
-                }
-                return true;
+                return false;
             }
-            return false;
+            _cameraOperator?.Reposition(position, player.GetVelocity());
+            if (renderImmediately)
+            {
+                _camera.Render();
+            }
+            return true;
+        }
+
+        // Reports whether the player currently occupies a forested area.
+        internal bool IsTargetInForest()
+        {
+            Player player = Player.m_localPlayer;
+            return player != null && _adapter?.IsForest(
+                player.transform.position) == true;
         }
 
         // Generates one substantially different position around the player.
         private Vector3 CreateViewpoint(
-            Vector3 focus, Player player)
+            Vector3 focus, Player player, CameraPlacement placement)
         {
-            string zone = SelectHorizontalZone();
-            Vector3 direction = CreateViewDirection(player, zone);
+            Vector3 direction = CreateViewDirection(player, placement);
             float radius = Random.Range(
                 PlacementSetting("minimum_distance"),
                 PlacementSetting("maximum_distance"));
             Vector3 position = focus + direction * radius;
-            float ground = ValheimCameraAdapter.GroundHeight(position) ??
-                           player.transform.position.y;
-            float amount = Mathf.InverseLerp(
-                PlacementSetting("minimum_distance"),
-                PlacementSetting("maximum_distance"), radius);
-            float maximumHeight = Mathf.Min(
-                PlacementSetting("maximum_height"),
-                _cameraOperator.MaximumHeight);
-            position.y = Mathf.Max(focus.y, ground + Mathf.Lerp(
-                PlacementSetting("minimum_height"),
-                maximumHeight, amount));
+            position.y = focus.y + (IsTop(placement)
+                ? PlacementSetting("top_height") : 0f);
             return position;
         }
 
@@ -172,14 +166,9 @@ namespace Landoria.SagaCapture
                 Vector3.up * _cameraOperator.TargetHeight;
         }
 
-        // Selects a front or lateral position around the player.
-        private static string SelectHorizontalZone()
-        {
-            return Random.value < 0.5f ? "front" : "lateral";
-        }
-
-        // Chooses a direction inside one player-relative cut zone.
-        private Vector3 CreateViewDirection(Player player, string zone)
+        // Chooses a direction around the player's current orientation.
+        private Vector3 CreateViewDirection(
+            Player player, CameraPlacement placement)
         {
             Vector3 forward = player.transform.forward;
             forward.y = 0f;
@@ -187,20 +176,40 @@ namespace Landoria.SagaCapture
             {
                 forward = Vector3.forward;
             }
-            float angle = CreateViewAngle(zone);
+            float angle = CreateViewAngle(placement);
             return Quaternion.Euler(0f, angle, 0f) * forward.normalized;
         }
 
-        // Generates an angle for front or lateral framing.
-        private float CreateViewAngle(string zone)
+        // Generates a varied front, left, or right framing angle.
+        private float CreateViewAngle(CameraPlacement placement)
         {
             float variation = PlacementSetting("angle_variation");
-            if (zone == "front")
+            float baseAngle = PlacementAngle(placement);
+            return baseAngle + Random.Range(-variation, variation);
+        }
+
+        // Maps a named camera placement to its angle around the player.
+        private static float PlacementAngle(CameraPlacement placement)
+        {
+            switch (placement)
             {
-                return Random.Range(-variation, variation);
+                case CameraPlacement.Left:
+                case CameraPlacement.LeftTop:
+                    return -90f;
+                case CameraPlacement.Right:
+                case CameraPlacement.RightTop:
+                    return 90f;
+                default:
+                    return 0f;
             }
-            float side = Random.value < 0.5f ? -1f : 1f;
-            return side * (90f + Random.Range(-variation, variation));
+        }
+
+        // Returns whether a placement requests additional elevation.
+        private static bool IsTop(CameraPlacement placement)
+        {
+            return placement == CameraPlacement.FrontTop ||
+                   placement == CameraPlacement.LeftTop ||
+                   placement == CameraPlacement.RightTop;
         }
 
         // Tests the frame and physical line of sight from one camera position.

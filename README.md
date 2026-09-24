@@ -33,6 +33,14 @@ Press `F8` to start or stop video recording.
 Videos are saved in the **SagaCapture** folder inside your Windows **Videos**
 folder. The folder is created automatically.
 
+## Automatic direction
+
+- Cinematic views are selected equally from the front, left, and right.
+- Elevated variants add `4 m` by default and are used only outside forests.
+- The Director avoids repeating the same placement twice when possible.
+- Up to four positions are tested when looking for a clear view of the player.
+- Gameplay and cinematic views alternate at configurable intervals.
+
 ## Settings
 
 Open this BepInEx file for recording settings:
@@ -46,6 +54,8 @@ BepInEx/config/Landoria.SagaCapture.cfg
 | `Controls` | `CaptureModeShortcut` | `F8` | Starts or stops Capture Mode. |
 | `CinematicCameraRendering` | `MaximumFrameRate` | `60` | Limits capture to `30` or `60` FPS. |
 | `GameplayCamera` | `IncludeUI` | `true` | Includes the Valheim interface in gameplay shots. |
+| `Director` | `MinimumShotDuration` | `5` | Sets the minimum shot duration in seconds. |
+| `Director` | `MaximumShotDuration` | `10` | Sets the maximum shot duration in seconds. |
 
 ## Performance recommendation
 

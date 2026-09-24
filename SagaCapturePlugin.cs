@@ -15,7 +15,6 @@ namespace Landoria.SagaCapture
         private const string PluginName = "Landoria.SagaCapture";
         private const string PluginVersion = "1.0.0";
         private ShotDirector _shotDirector;
-        private InterruptedRecordingRecovery _recordingRecovery;
         private Harmony _harmony;
         private static SagaCapturePlugin _instance;
         internal static ManualLogSource Log { get; private set; }
@@ -35,8 +34,6 @@ namespace Landoria.SagaCapture
                 Config, Logger, "Saga Capture",
                 () => Preference.RestoreDefaults(Config));
             _shotDirector = gameObject.AddComponent<ShotDirector>();
-            _recordingRecovery =
-                gameObject.AddComponent<InterruptedRecordingRecovery>();
             _harmony = new Harmony(PluginGuid);
             _harmony.PatchAll();
             Log.LogInfo($"{PluginName} {PluginVersion} is loaded.");
@@ -111,8 +108,6 @@ namespace Landoria.SagaCapture
             _harmony = null;
             _shotDirector?.Shutdown();
             _shotDirector = null;
-            _recordingRecovery?.Shutdown();
-            _recordingRecovery = null;
             Log?.LogInfo($"{PluginName} {PluginVersion} is unloaded.");
             Log = null;
             _instance = null;

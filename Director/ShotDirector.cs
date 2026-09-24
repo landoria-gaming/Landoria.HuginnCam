@@ -12,10 +12,10 @@ namespace Landoria.SagaCapture
         private const int AntiAliasingSamples = 1;
         private const int MinimumWarmupFrames = 8;
         private const float MinimumWarmupSeconds = 0.5f;
-        private const float MinimumShotDurationSeconds = 5f;
-        private const float MaximumShotDurationSeconds = 10f;
-        private const float TargetLossGraceSeconds = 1f;
+        private const float TargetLossGraceDuration = 1f;
         private SagaCaptureRig _cameraRig;
+        private readonly CameraPlacementDirector _placementDirector =
+            new CameraPlacementDirector();
         private Recorder _recorder;
         private Coroutine _warmupRoutine;
         private AudioListener _gameplayListener;
@@ -64,7 +64,7 @@ namespace Landoria.SagaCapture
             {
                 _targetLostSince = Time.time;
             }
-            else if (Time.time - _targetLostSince >= TargetLossGraceSeconds)
+            else if (Time.time - _targetLostSince >= TargetLossGraceDuration)
             {
                 ActivateGameplay("Cinematic target occluded; cut to gameplay.");
             }
@@ -141,7 +141,7 @@ namespace Landoria.SagaCapture
                 _targetLostSince = -1f;
                 SubscribeRecorder();
                 _cameraRig.BeginMovement();
-                if (!_cameraRig.TryCutViewpoint(false))
+                if (!_placementDirector.TryPlace(_cameraRig, false))
                 {
                     SagaCapturePlugin.Log.LogWarning(
                         "Initial cinematic cut has no visible viewpoint.");
@@ -216,17 +216,18 @@ namespace Landoria.SagaCapture
                 ActivateGameplay("Gameplay shot activated.");
                 return;
             }
-            bool visible = _cameraRig?.TryCutViewpoint(true) == true;
+            bool visible = _cameraRig != null &&
+                _placementDirector.TryPlace(_cameraRig, true);
             if (!visible)
             {
-                SagaCapturePlugin.Log.LogInfo(
+                SagaCapturePlugin.Log.LogDebug(
                     "Cinematic cut postponed: no visible target viewpoint.");
             }
             else
             {
                 _videoSource.SetCinematic(true);
                 _targetLostSince = -1f;
-                SagaCapturePlugin.Log.LogInfo(
+                SagaCapturePlugin.Log.LogDebug(
                     "Cinematic shot activated with a new viewpoint.");
             }
             ScheduleNextCut();
@@ -238,14 +239,15 @@ namespace Landoria.SagaCapture
             _videoSource.SetCinematic(false);
             _targetLostSince = -1f;
             ScheduleNextCut();
-            SagaCapturePlugin.Log.LogInfo(logMessage);
+            SagaCapturePlugin.Log.LogDebug(logMessage);
         }
 
         // Chooses the duration of the current shot independently of the recorder.
         private void ScheduleNextCut()
         {
             _nextShotAt = Time.time + UnityEngine.Random.Range(
-                MinimumShotDurationSeconds, MaximumShotDurationSeconds);
+                Preference.MinimumShotDuration,
+                Preference.MaximumShotDuration);
         }
 
         // Creates the encoder and output configuration.
@@ -267,7 +269,7 @@ namespace Landoria.SagaCapture
         }
 
         // Resolves the FFmpeg directory used by the recorder.
-        internal static string ResolveFfmpegDirectory()
+        private static string ResolveFfmpegDirectory()
         {
             string directory = Environment.GetEnvironmentVariable("FFMPEG_PATH");
             if (string.IsNullOrWhiteSpace(directory) ||
@@ -288,7 +290,7 @@ namespace Landoria.SagaCapture
         }
 
         // Returns the dedicated output directory and creates it when missing.
-        internal static string ResolveOutputDirectory()
+        private static string ResolveOutputDirectory()
         {
             string directory = Path.Combine(Environment.GetFolderPath(
                 Environment.SpecialFolder.MyVideos), "SagaCapture");
