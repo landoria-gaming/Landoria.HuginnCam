@@ -1,10 +1,6 @@
 # SagaCapture
 
-SagaCapture records your Valheim adventures as an automatically directed MP4.
-Unlike a traditional screen recorder, it does not keep a single view for the
-whole video. It switches between the gameplay camera and a moving cinematic
-camera that follows your character, frames the action, and avoids terrain and
-obstacles.
+Turn your Valheim adventures into high-definition cinematic videos with dynamic camera angles.
 
 [Watch SagaCapture in action on YouTube](https://youtu.be/_2L1In2dieM)
 
