@@ -172,7 +172,7 @@ namespace Landoria.SagaCapture
                 Vector3.up * _cameraOperator.TargetHeight;
         }
 
-        // Selects one horizontal cut zone allowed by the output mode.
+        // Selects a front or lateral position around the player.
         private static string SelectHorizontalZone()
         {
             return Random.value < 0.5f ? "front" : "lateral";
@@ -191,17 +191,13 @@ namespace Landoria.SagaCapture
             return Quaternion.Euler(0f, angle, 0f) * forward.normalized;
         }
 
-        // Generates an angle for front, lateral, or rear framing.
+        // Generates an angle for front or lateral framing.
         private float CreateViewAngle(string zone)
         {
             float variation = PlacementSetting("angle_variation");
             if (zone == "front")
             {
                 return Random.Range(-variation, variation);
-            }
-            if (zone == "rear")
-            {
-                return 180f + Random.Range(-variation, variation);
             }
             float side = Random.value < 0.5f ? -1f : 1f;
             return side * (90f + Random.Range(-variation, variation));
