@@ -13,7 +13,7 @@
     <UnityManagedPath>$(ValheimGamePath)\valheim_Data\Managed</UnityManagedPath>
     <ILRepackTargetsFile>$(MSBuildProjectDirectory)\ILRepack.targets</ILRepackTargetsFile>
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
-    <CameraRecorderAssetUrl>https://github.com/UnityRuntimeCameraRecorder/UnityRuntimeCameraRecorder/releases/download/1.0.0-snapshot/UnityRuntimeCameraRecorder-1.0.0-snapshot-windows-x64.zip</CameraRecorderAssetUrl>
+    <CameraRecorderAssetUrl>https://github.com/CineCapture/UnityRuntimeCameraRecorder/releases/download/1.0.0-snapshot/UnityRuntimeCameraRecorder-1.0.0-snapshot-windows-x64.zip</CameraRecorderAssetUrl>
     <CameraRecorderDownloadDirectory>$(MSBuildProjectDirectory)\obj\$(Configuration)\downloads</CameraRecorderDownloadDirectory>
     <CameraRecorderArchive>$(CameraRecorderDownloadDirectory)\UnityRuntimeCameraRecorder.zip</CameraRecorderArchive>
     <CameraRecorderEtag>$(MSBuildProjectDirectory)\lib\.UnityRuntimeCameraRecorder.etag</CameraRecorderEtag>
