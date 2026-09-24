@@ -61,8 +61,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration\ConfigWatcher.cs" />
-    <Compile Include="Configuration\CaptureGraphicsPreset.cs" />
-    <Compile Include="Configuration\CameraRenderResolutionPreset.cs" />
     <Compile Include="Configuration\Preference.cs" />
     <Compile Include="SagaCapturePlugin.cs" />
     <Compile Include="Camera\AudioListener.cs" />

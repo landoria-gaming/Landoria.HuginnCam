@@ -8,15 +8,6 @@ CaptureModeShortcut = F8
 
 [CinematicCameraRendering]
 
-## Valheim graphics preset used to render the cinematic camera before video encoding:
-## SameAsGame, VeryLow, Low, Medium, or High.
-GraphicsPreset = SameAsGame
-
-## Internal cinematic-camera resolution: SameAsGame, HD720 (1280x720),
-## FullHD1080 (1920x1080), QHD1440 (2560x1440),
-## or UHD2160 (3840x2160).
-Resolution = SameAsGame
-
 ## Frame rate shared by CaptureMode, the Unity game loop,
 ## and the video recorder: 30 or 60 FPS. VSync is temporarily disabled
 ## so Unity does not render more frames than the recorder accepts.

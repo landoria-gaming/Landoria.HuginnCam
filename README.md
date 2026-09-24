@@ -44,10 +44,15 @@ BepInEx/config/Landoria.SagaCapture.cfg
 | Section | Setting | Default | Description |
 | --- | --- | --- | --- |
 | `Controls` | `CaptureModeShortcut` | `F8` | Starts or stops Capture Mode. |
-| `CinematicCameraRendering` | `GraphicsPreset` | `SameAsGame` | Sets the cinematic-camera graphics preset: `SameAsGame`, `VeryLow`, `Low`, `Medium`, or `High`. |
-| `CinematicCameraRendering` | `Resolution` | `SameAsGame` | Sets the cinematic-camera resolution: `SameAsGame`, `HD720`, `FullHD1080`, `QHD1440`, or `UHD2160`. |
 | `CinematicCameraRendering` | `MaximumFrameRate` | `60` | Limits capture to `30` or `60` FPS. |
 | `GameplayCamera` | `IncludeUI` | `true` | Includes the Valheim interface in gameplay shots. |
+
+## Performance recommendation
+
+SagaCapture uses the current game resolution. Keep the game fast enough to
+maintain the selected recording rate of 30 or 60 FPS. If needed, lower the game
+resolution from 4K (`2160p`) to 2K (`1440p`) or Full HD (`1080p`). Prefer a
+native resolution when performance allows it.
 
 ## Contact
 
