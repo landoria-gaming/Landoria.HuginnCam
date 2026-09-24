@@ -75,7 +75,6 @@
     <Compile Include="Rendering\CameraLogger.cs" />
     <Compile Include="Rendering\EffectMirror.cs" />
     <Compile Include="Rendering\Effects.cs" />
-    <Compile Include="Rendering\QualityOverride.cs" />
     <Compile Include="Rendering\Rendering.cs" />
     <Compile Include="Patches\FootstepVolumePatch.cs" />
     <Compile Include="Patches\PlayerVisibilityPatch.cs" />

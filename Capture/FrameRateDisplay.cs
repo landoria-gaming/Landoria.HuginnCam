@@ -36,7 +36,7 @@ namespace Landoria.SagaCapture
             if (_style == null)
             {
                 int fontSize = Mathf.Clamp(
-                    Mathf.RoundToInt(Screen.height / 60f), 24, 42);
+                    Mathf.RoundToInt(Screen.height / 65f), 22, 38);
                 _style = new GUIStyle(GUI.skin.label)
                 {
                     fontSize = fontSize,

@@ -29,7 +29,8 @@ namespace Landoria.SagaCapture
         internal static int CameraMaximumFrameRate =>
             cameraFrameRate.Value == "30" ? 30 : 60;
         internal static bool LimitGameFrameRate =>
-            cameraFrameRate.Value != "SameAsGame";
+            cameraFrameRate.Value != "SameAsGame" ||
+            QualitySettings.vSyncCount == 0;
         internal static bool ShowFrameRate => showFrameRate.Value;
         internal static bool GameplayIncludeUi => gameplayIncludeUi.Value;
         internal static float MinimumShotDuration => minimumShotDuration.Value;
@@ -48,11 +49,11 @@ namespace Landoria.SagaCapture
                 "Shortcut used to enter or leave CaptureMode.\n" +
                 "\nhttps://docs.unity3d.com/ScriptReference/KeyCode.html");
             cameraFrameRate = config.Bind(
-                "CinematicCameraRendering", "MaximumFrameRate", "60",
+                "CinematicCameraRendering", "MaximumFrameRate", "SameAsGame",
                 new ConfigDescription(
                     "Capture frame rate: 30, 60, or SameAsGame. " +
-                    "SameAsGame preserves the game's VSync and frame-rate " +
-                    "limit while recording video at up to 60 FPS.",
+                    "SameAsGame preserves active VSync; when VSync is off, " +
+                    "the game and video are limited to 60 FPS.",
                     new AcceptableValueList<string>(
                         "30", "60", "SameAsGame")));
             showFrameRate = config.Bind(
@@ -87,7 +88,7 @@ namespace Landoria.SagaCapture
         internal static void RestoreDefaults(ConfigFile config)
         {
             captureModeShortcut.Value = new KeyboardShortcut(KeyCode.F8);
-            cameraFrameRate.Value = "60";
+            cameraFrameRate.Value = "SameAsGame";
             showFrameRate.Value = false;
             recordingQuality.Value =
                 UnityRuntimeCameraRecorder.RecordingQualityPreset.Medium;

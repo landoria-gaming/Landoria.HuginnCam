@@ -142,7 +142,7 @@ namespace Landoria.SagaCapture
                 _targetLostSince = -1f;
                 SubscribeRecorder();
                 _cameraRig.BeginMovement();
-                if (!_placementDirector.TryPlace(_cameraRig, false))
+                if (!_placementDirector.TryPlace(_cameraRig))
                 {
                     SagaCapturePlugin.Log.LogWarning(
                         "Initial cinematic cut has no visible viewpoint.");
@@ -218,7 +218,7 @@ namespace Landoria.SagaCapture
                 return;
             }
             bool visible = _cameraRig != null &&
-                _placementDirector.TryPlace(_cameraRig, true);
+                _placementDirector.TryPlace(_cameraRig);
             if (!visible)
             {
                 SagaCapturePlugin.Log.LogDebug(

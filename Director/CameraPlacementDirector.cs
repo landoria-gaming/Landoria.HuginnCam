@@ -29,7 +29,7 @@ namespace Landoria.SagaCapture
         private CameraPlacement? _lastPlacement;
 
         // Finds a visible placement, excluding elevated views in forests.
-        internal bool TryPlace(SagaCaptureRig rig, bool renderImmediately)
+        internal bool TryPlace(SagaCaptureRig rig)
         {
             CameraPlacement[] placements = rig.IsTargetInForest()
                 ? NormalPlacements : OpenAreaPlacements;
@@ -38,7 +38,7 @@ namespace Landoria.SagaCapture
             {
                 CameraPlacement placement = SelectPlacement(placements);
                 if (!rig.TryCutViewpoint(
-                    placement, MinimumViewAngle, renderImmediately))
+                    placement, MinimumViewAngle))
                 {
                     continue;
                 }

@@ -33,17 +33,6 @@ Press `F8` to start or stop video recording.
 Videos are saved in the **SagaCapture** folder inside your Windows **Videos**
 folder. The folder is created automatically.
 
-## Automatic direction
-
-- Front, left, and right placements have equal chances.
-- Elevated variants add `4 m` by default, occur half as often as their normal
-  counterparts, and are used only outside forests.
-- The Director avoids repeating the same placement twice when possible.
-- A cinematic view is rejected when its real horizontal angle is less than
-  `45°` from the camera's current direction around the player.
-- Up to four positions are tested when looking for a clear view of the player.
-- Gameplay and cinematic views alternate at configurable intervals.
-
 ## Settings
 
 Open this BepInEx file for recording settings:
@@ -55,7 +44,7 @@ BepInEx/config/Landoria.SagaCapture.cfg
 | Section | Setting | Default | Description |
 | --- | --- | --- | --- |
 | `Controls` | `CaptureModeShortcut` | `F8` | Starts or stops Capture Mode. |
-| `CinematicCameraRendering` | `MaximumFrameRate` | `60` | Sets `30`, `60`, or `SameAsGame`. The latter preserves the game's VSync and frame-rate limit while recording at up to 60 FPS. |
+| `CinematicCameraRendering` | `MaximumFrameRate` | `SameAsGame` | Sets `30`, `60`, or `SameAsGame`. The latter preserves active VSync, or limits the game and video to 60 FPS when VSync is off. |
 | `CinematicCameraRendering` | `ShowFrameRate` | `false` | Shows the cinematic-camera FPS counter in the top-left corner. |
 | `Recording` | `Quality` | `Medium` | Sets the recording quality to `Low`, `Medium`, `High`, or `Highest`. Lower values reduce file size and encoding load. |
 | `GameplayCamera` | `IncludeUI` | `true` | Includes the Valheim interface in gameplay shots. |

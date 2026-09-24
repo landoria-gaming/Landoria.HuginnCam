@@ -31,11 +31,6 @@ namespace Landoria.SagaCapture
             _camera.depth = sourceCamera.depth + 1f;
             _camera.enabled = false;
             _effects.Initialize(sourceCamera, cameraObject, captureSettings);
-            if (captureSettings.HasValue)
-            {
-                cameraObject.AddComponent<SagaCaptureQualityOverride>()
-                    .Initialize(captureSettings.Value);
-            }
             SynchronizePose();
         }
 
@@ -111,10 +106,9 @@ namespace Landoria.SagaCapture
                    IsTargetVisible(_camera.transform.position, player);
         }
 
-        // Tries one director-selected viewpoint and optionally renders it now.
+        // Tries one director-selected viewpoint without rendering it.
         internal bool TryCutViewpoint(
-            CameraPlacement placement, float minimumViewAngle,
-            bool renderImmediately)
+            CameraPlacement placement, float minimumViewAngle)
         {
             Player player = Player.m_localPlayer;
             if (!_movementEnabled || player == null)
@@ -129,10 +123,6 @@ namespace Landoria.SagaCapture
                 return false;
             }
             _cameraOperator?.Reposition(position, player.GetVelocity());
-            if (renderImmediately)
-            {
-                _camera.Render();
-            }
             return true;
         }
 
