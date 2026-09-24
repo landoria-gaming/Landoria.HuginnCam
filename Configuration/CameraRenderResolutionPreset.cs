@@ -4,7 +4,6 @@ namespace Landoria.SagaCapture
     internal enum CameraRenderResolutionPreset
     {
         SameAsGame,
-        Preset,
         HD720,
         FullHD1080,
         QHD1440,

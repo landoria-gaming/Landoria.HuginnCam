@@ -32,13 +32,7 @@ namespace Landoria.SagaCapture
         // Adds recoverable Saga Capture containers in chronological name order.
         private void EnqueueInterruptedRecordings()
         {
-            string directory = Environment.GetFolderPath(
-                Environment.SpecialFolder.MyVideos);
-            if (!Directory.Exists(directory))
-            {
-                return;
-            }
-
+            string directory = ShotDirector.ResolveOutputDirectory();
             string[] paths = Directory.GetFiles(
                 directory, "SagaCapture_*" + TemporarySuffix);
             Array.Sort(paths, StringComparer.OrdinalIgnoreCase);

@@ -24,8 +24,7 @@ namespace Landoria.SagaCapture
         internal static void GetResolution(GraphicsSettingsState settings,
             out int width, out int height, out FilterMode filterMode)
         {
-            GetDimensions(settings.m_target3DResolutionVertical,
-                out width, out height);
+            GetDimensions(out width, out height);
             filterMode = settings.m_upscalingAlgorithm ==
                          UpscalingAlgorithm.NearestNeighbor
                 ? FilterMode.Point
@@ -33,8 +32,7 @@ namespace Landoria.SagaCapture
         }
 
         // Resolves fixed, game, or graphics-preset dimensions.
-        private static void GetDimensions(int presetHeight,
-            out int width, out int height)
+        private static void GetDimensions(out int width, out int height)
         {
             if (TryGetFixedDimensions(out width, out height))
             {
@@ -47,8 +45,8 @@ namespace Landoria.SagaCapture
                 height = Screen.height;
                 return;
             }
-            height = ResolvePresetHeight(presetHeight);
-            width = Math.Max(2, (height * Screen.width / Screen.height) & ~1);
+            throw new InvalidOperationException(
+                "Unsupported cinematic camera resolution.");
         }
 
         // Resolves one fixed camera resolution.
@@ -64,22 +62,6 @@ namespace Landoria.SagaCapture
             };
             width = height == 0 ? 0 : height * 16 / 9;
             return height != 0;
-        }
-
-        // Normalizes the vertical resolution supplied by a Valheim preset.
-        private static int ResolvePresetHeight(int height)
-        {
-            if (height <= 0)
-            {
-                height = Screen.dpi <= 96f
-                    ? Screen.height
-                    : Mathf.RoundToInt(Screen.height * 96f / Screen.dpi);
-            }
-            else if (height == int.MaxValue)
-            {
-                height = Screen.height;
-            }
-            return Math.Max(2, height & ~1);
         }
 
         // Applies the selected Valheim preset to a camera graphics state.

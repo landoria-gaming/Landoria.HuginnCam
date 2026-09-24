@@ -55,7 +55,6 @@ namespace Landoria.SagaCapture
                 "CinematicCameraRendering", "Resolution",
                 CameraRenderResolutionPreset.SameAsGame,
                 "Internal cinematic-camera resolution: SameAsGame, " +
-                "Preset (graphics preset value), " +
                 "HD720 (1280x720), " +
                 "FullHD1080 (1920x1080), QHD1440 (2560x1440), " +
                 "or UHD2160 (3840x2160).");
@@ -68,7 +67,7 @@ namespace Landoria.SagaCapture
                     "more frames than the recorder accepts.",
                     new AcceptableValueList<int>(30, 60)));
             gameplayIncludeUi = config.Bind(
-                "GameplayCamera", "IncludeUI", false,
+                "GameplayCamera", "IncludeUI", true,
                 "Include Valheim's interface in gameplay-camera shots. " +
                 "When false, capture occurs before overlay UI is rendered.");
         }
@@ -81,7 +80,7 @@ namespace Landoria.SagaCapture
             cameraRenderResolution.Value =
                 CameraRenderResolutionPreset.SameAsGame;
             cameraMaximumFrameRate.Value = 60;
-            gameplayIncludeUi.Value = false;
+            gameplayIncludeUi.Value = true;
             config.Save();
             Landoria.Shared.ConfigWatcher.IgnoreCurrentFileVersion();
         }

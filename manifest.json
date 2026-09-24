@@ -2,7 +2,7 @@
   "name": "SagaCapture",
   "version_number": "1.0.0",
   "website_url": "https://github.com/landoria-gaming/Landoria.SagaCapture",
-  "description": "Records gameplay at its native resolution and up to 60 FPS with audio.",
+  "description": "Automatically records Valheim videos, switching between gameplay and cinematic cameras that follow your character.",
   "dependencies": [
     "denikson-BepInExPack_Valheim-5.4.2350"
   ],

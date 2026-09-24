@@ -12,8 +12,8 @@ CaptureModeShortcut = F8
 ## SameAsGame, VeryLow, Low, Medium, or High.
 GraphicsPreset = SameAsGame
 
-## Internal cinematic-camera resolution: SameAsGame, Preset (graphics preset value),
-## HD720 (1280x720), FullHD1080 (1920x1080), QHD1440 (2560x1440),
+## Internal cinematic-camera resolution: SameAsGame, HD720 (1280x720),
+## FullHD1080 (1920x1080), QHD1440 (2560x1440),
 ## or UHD2160 (3840x2160).
 Resolution = SameAsGame
 
@@ -26,4 +26,4 @@ MaximumFrameRate = 60
 
 ## Include Valheim's interface in gameplay-camera shots.
 ## When false, capture occurs before overlay UI is rendered.
-IncludeUI = false
+IncludeUI = true

@@ -282,12 +282,18 @@ namespace Landoria.SagaCapture
         // Creates a unique MP4 path in the user's video directory.
         private static string CreateOutputPath()
         {
-            string directory = Environment.GetFolderPath(
-                Environment.SpecialFolder.MyVideos);
-            Directory.CreateDirectory(directory);
             return Path.Combine(
-                directory,
+                ResolveOutputDirectory(),
                 $"SagaCapture_{DateTime.Now:yyyy-MM-dd_HH-mm-ss-fff}.mp4");
+        }
+
+        // Returns the dedicated output directory and creates it when missing.
+        internal static string ResolveOutputDirectory()
+        {
+            string directory = Path.Combine(Environment.GetFolderPath(
+                Environment.SpecialFolder.MyVideos), "SagaCapture");
+            Directory.CreateDirectory(directory);
+            return directory;
         }
 
         // Connects the recorder lifecycle callbacks.
@@ -324,7 +330,7 @@ namespace Landoria.SagaCapture
         // Reports the completed file and releases the session.
         private void HandleRecordingCompleted()
         {
-            Notify("Saga Capture saved the video to My Videos.");
+            Notify("Saga Capture saved the video to Videos/SagaCapture.");
             SagaCapturePlugin.Log.LogInfo($"Recording saved: {_outputPath}");
             ReleaseSession();
         }
