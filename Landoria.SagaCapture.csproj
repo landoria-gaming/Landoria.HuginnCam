@@ -53,7 +53,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CameraOperator\CameraOperator.csproj">
+    <ProjectReference Include="CameraOperator\CameraOperator.csproj">
       <Project>{8A80B99F-CA09-4E77-91EA-37267C259192}</Project>
       <Name>CameraOperator</Name>
       <AdditionalProperties>UnityManagedPath=$(ValheimGamePath)\valheim_Data\Managed</AdditionalProperties>

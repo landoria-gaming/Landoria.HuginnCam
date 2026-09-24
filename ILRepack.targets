@@ -3,7 +3,7 @@
   <Target Name="MergeSagaCaptureDependencies" AfterTargets="Build">
     <PropertyGroup>
       <SagaMergedAssembly>$(IntermediateOutputPath)$(TargetName).merged$(TargetExt)</SagaMergedAssembly>
-      <CameraOperatorOutput>$(MSBuildProjectDirectory)\..\CameraOperator\bin\$(Configuration)\net48</CameraOperatorOutput>
+      <CameraOperatorOutput>$(MSBuildProjectDirectory)\CameraOperator\bin\$(Configuration)\net48</CameraOperatorOutput>
     </PropertyGroup>
     <ItemGroup>
       <SagaAssembliesToMerge Include="$(IntermediateOutputPath)$(TargetFileName)" />

@@ -1,0 +1,3 @@
+[submodule "CameraOperator"]
+	path = CameraOperator
+	url = https://github.com/CineCapture/CameraOperator.git
