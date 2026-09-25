@@ -13,7 +13,7 @@ namespace Landoria.SagaCapture
     {
         private const string PluginGuid = "Landoria.SagaCapture";
         private const string PluginName = "Landoria.SagaCapture";
-        private const string PluginVersion = "1.0.0";
+        private const string PluginVersion = "1.0.1";
         private ShotDirector _shotDirector;
         private Harmony _harmony;
         private static SagaCapturePlugin _instance;

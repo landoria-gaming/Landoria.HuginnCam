@@ -1,6 +1,6 @@
 # SagaCapture
 
-Turn your Valheim adventures into high-definition cinematic videos with dynamic camera angles.
+Records high-definition Valheim videos with automatic switching between your gameplay view and a second camera that follows your character.
 
 [Watch SagaCapture in action on YouTube](https://youtu.be/_2L1In2dieM)
 
