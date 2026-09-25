@@ -23,6 +23,17 @@ namespace Landoria.SagaCapture
         internal static bool IsCinematicImageActive =>
             _instance?._shotDirector?.IsCinematicImageActive == true;
 
+        // Stops an active recording before a menu exit action continues.
+        internal static void StopRecordingForMenuExit()
+        {
+            if (_instance?._shotDirector?.IsActive != true)
+            {
+                return;
+            }
+            Log.LogInfo("Stopping recording before leaving the game.");
+            _instance._shotDirector.StopRecording();
+        }
+
         // Initializes the plugin logging.
         private void Awake()
         {

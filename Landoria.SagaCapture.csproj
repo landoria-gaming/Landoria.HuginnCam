@@ -69,7 +69,9 @@
     <Compile Include="Rendering\Effects.cs" />
     <Compile Include="Rendering\Rendering.cs" />
     <Compile Include="Patches\FootstepVolumePatch.cs" />
+    <Compile Include="Patches\LogoutMenuPatch.cs" />
     <Compile Include="Patches\PlayerVisibilityPatch.cs" />
+    <Compile Include="Patches\QuitMenuPatch.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
