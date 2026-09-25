@@ -13,11 +13,11 @@
     <UnityManagedPath>$(ValheimGamePath)\valheim_Data\Managed</UnityManagedPath>
     <ILRepackTargetsFile>$(MSBuildProjectDirectory)\ILRepack.targets</ILRepackTargetsFile>
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
-    <CameraRecorderAssetUrl>https://github.com/CineCapture/UnityRuntimeCameraRecorder/releases/download/1.0.0-snapshot/UnityRuntimeCameraRecorder-1.0.0-snapshot-windows-x64.zip</CameraRecorderAssetUrl>
-    <CameraRecorderDownloadDirectory>$(MSBuildProjectDirectory)\obj\$(Configuration)\downloads</CameraRecorderDownloadDirectory>
-    <CameraRecorderArchive>$(CameraRecorderDownloadDirectory)\UnityRuntimeCameraRecorder.zip</CameraRecorderArchive>
-    <CameraRecorderEtag>$(MSBuildProjectDirectory)\lib\.UnityRuntimeCameraRecorder.etag</CameraRecorderEtag>
-    <CameraRecorderDownloadedEtag>$(CameraRecorderDownloadDirectory)\UnityRuntimeCameraRecorder.etag</CameraRecorderDownloadedEtag>
+    <CineCaptureLatestReleaseUrl>https://github.com/cine-capture/CineCapture/releases/latest</CineCaptureLatestReleaseUrl>
+    <CineCaptureDownloadDirectory>$(MSBuildProjectDirectory)\obj\$(Configuration)\downloads</CineCaptureDownloadDirectory>
+    <CineCaptureArchive>$(CineCaptureDownloadDirectory)\CineCapture.zip</CineCaptureArchive>
+    <CineCaptureEtag>$(MSBuildProjectDirectory)\lib\.CineCapture.etag</CineCaptureEtag>
+    <CineCaptureDownloadedEtag>$(CineCaptureDownloadDirectory)\CineCapture.etag</CineCaptureDownloadedEtag>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <DebugSymbols>true</DebugSymbols><DebugType>full</DebugType><Optimize>false</Optimize>
@@ -42,8 +42,7 @@
     <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.ScreenCaptureModule"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.ScreenCaptureModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.UI"><HintPath>$(ValheimGamePath)\valheim_Data\Managed\UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="FFmpegMediaWriter"><HintPath>$(MSBuildProjectDirectory)\lib\FFmpegMediaWriter.dll</HintPath><Private>true</Private></Reference>
-    <Reference Include="UnityRuntimeCameraRecorder"><HintPath>$(MSBuildProjectDirectory)\lib\UnityRuntimeCameraRecorder.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="CineCapture"><HintPath>$(MSBuildProjectDirectory)\lib\CineCapture.dll</HintPath><Private>true</Private></Reference>
     <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.44" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
@@ -51,13 +50,6 @@
       <Link>Direct3DVideoEncoder.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="CameraOperator\CameraOperator.csproj">
-      <Project>{8A80B99F-CA09-4E77-91EA-37267C259192}</Project>
-      <Name>CameraOperator</Name>
-      <AdditionalProperties>UnityManagedPath=$(ValheimGamePath)\valheim_Data\Managed</AdditionalProperties>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration\ConfigWatcher.cs" />
@@ -87,26 +79,36 @@
   <ItemGroup>
     <_SnapshotExtraFiles Include="$(MSBuildProjectDirectory)\bin\Release\Direct3DVideoEncoder.dll" />
   </ItemGroup>
-  <!-- Downloads and extracts the mutable camera recorder snapshot only when its ETag changes. -->
-  <Target Name="UpdateCameraRecorderLibraries" BeforeTargets="PrepareForBuild">
-    <MakeDir Directories="$(CameraRecorderDownloadDirectory);$(MSBuildProjectDirectory)\lib" />
-    <Exec Command="curl --fail --location --silent --show-error --etag-compare &quot;$(CameraRecorderEtag)&quot; --etag-save &quot;$(CameraRecorderDownloadedEtag)&quot; --output &quot;$(CameraRecorderArchive)&quot; --write-out &quot;%%{http_code}&quot; &quot;$(CameraRecorderAssetUrl)&quot;"
+  <!-- Downloads and extracts the latest CineCapture release only when its ETag changes. -->
+  <Target Name="UpdateCineCaptureLibraries" BeforeTargets="PrepareForBuild">
+    <MakeDir Directories="$(CineCaptureDownloadDirectory);$(MSBuildProjectDirectory)\lib" />
+    <Exec Command="curl --fail --location --silent --show-error --output NUL --write-out &quot;%%{url_effective}&quot; &quot;$(CineCaptureLatestReleaseUrl)&quot;"
           ConsoleToMSBuild="true"
           StandardOutputImportance="Low">
-      <Output TaskParameter="ConsoleOutput" ItemName="_CameraRecorderDownloadOutput" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_CineCaptureReleaseOutput" />
     </Exec>
     <PropertyGroup>
-      <_CameraRecorderHttpStatus>@(_CameraRecorderDownloadOutput)</_CameraRecorderHttpStatus>
+      <_CineCaptureReleaseUrl>@(_CineCaptureReleaseOutput)</_CineCaptureReleaseUrl>
+      <_CineCaptureReleaseTag>$([System.IO.Path]::GetFileName('$(_CineCaptureReleaseUrl)'))</_CineCaptureReleaseTag>
+      <_CineCaptureAssetUrl>https://github.com/cine-capture/CineCapture/releases/latest/download/CineCapture-$(_CineCaptureReleaseTag)-windows-x64.zip</_CineCaptureAssetUrl>
     </PropertyGroup>
-    <Error Condition="'$(_CameraRecorderHttpStatus)' != '200' And '$(_CameraRecorderHttpStatus)' != '304'"
-           Text="Unexpected HTTP status $(_CameraRecorderHttpStatus) while downloading UnityRuntimeCameraRecorder." />
-    <Delete Files="$(MSBuildProjectDirectory)\lib\UnityRuntimeCameraRecorder.dll;$(MSBuildProjectDirectory)\lib\FFmpegMediaWriter.dll;$(MSBuildProjectDirectory)\lib\Direct3DVideoEncoder.dll" Condition="'$(_CameraRecorderHttpStatus)' == '200'" />
-    <Unzip SourceFiles="$(CameraRecorderArchive)"
+    <Exec Command="curl --fail --location --silent --show-error --etag-compare &quot;$(CineCaptureEtag)&quot; --etag-save &quot;$(CineCaptureDownloadedEtag)&quot; --output &quot;$(CineCaptureArchive)&quot; --write-out &quot;%%{http_code}&quot; &quot;$(_CineCaptureAssetUrl)&quot;"
+          ConsoleToMSBuild="true"
+          StandardOutputImportance="Low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_CineCaptureDownloadOutput" />
+    </Exec>
+    <PropertyGroup>
+      <_CineCaptureHttpStatus>@(_CineCaptureDownloadOutput)</_CineCaptureHttpStatus>
+    </PropertyGroup>
+    <Error Condition="'$(_CineCaptureHttpStatus)' != '200' And '$(_CineCaptureHttpStatus)' != '304'"
+           Text="Unexpected HTTP status $(_CineCaptureHttpStatus) while downloading CineCapture." />
+    <Delete Files="$(MSBuildProjectDirectory)\lib\CineCapture.dll;$(MSBuildProjectDirectory)\lib\Direct3DVideoEncoder.dll" Condition="'$(_CineCaptureHttpStatus)' == '200'" />
+    <Unzip SourceFiles="$(CineCaptureArchive)"
            DestinationFolder="$(MSBuildProjectDirectory)\lib"
-           Condition="'$(_CameraRecorderHttpStatus)' == '200'" />
-    <Copy SourceFiles="$(CameraRecorderDownloadedEtag)"
-          DestinationFiles="$(CameraRecorderEtag)"
-          Condition="'$(_CameraRecorderHttpStatus)' == '200'" />
+           Condition="'$(_CineCaptureHttpStatus)' == '200'" />
+    <Copy SourceFiles="$(CineCaptureDownloadedEtag)"
+          DestinationFiles="$(CineCaptureEtag)"
+          Condition="'$(_CineCaptureHttpStatus)' == '200'" />
   </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -3,21 +3,17 @@
   <Target Name="MergeSagaCaptureDependencies" AfterTargets="Build">
     <PropertyGroup>
       <SagaMergedAssembly>$(IntermediateOutputPath)$(TargetName).merged$(TargetExt)</SagaMergedAssembly>
-      <CameraOperatorOutput>$(MSBuildProjectDirectory)\CameraOperator\bin\$(Configuration)\net48</CameraOperatorOutput>
     </PropertyGroup>
     <ItemGroup>
       <SagaAssembliesToMerge Include="$(IntermediateOutputPath)$(TargetFileName)" />
-      <SagaAssembliesToMerge Include="$(CameraOperatorOutput)\CameraOperator.dll" />
-      <SagaAssembliesToMerge Include="$(CameraOperatorOutput)\YamlDotNet.dll" />
-      <SagaAssembliesToMerge Include="$(MSBuildProjectDirectory)\lib\UnityRuntimeCameraRecorder.dll" />
-      <SagaAssembliesToMerge Include="$(MSBuildProjectDirectory)\lib\FFmpegMediaWriter.dll" />
+      <SagaAssembliesToMerge Include="$(MSBuildProjectDirectory)\lib\CineCapture.dll" />
     </ItemGroup>
     <Error Condition="!Exists('%(SagaAssembliesToMerge.Identity)')"
            Text="Missing assembly to merge: %(SagaAssembliesToMerge.Identity)" />
     <ILRepack InputAssemblies="@(SagaAssembliesToMerge)"
               OutputFile="$(SagaMergedAssembly)"
               TargetKind="SameAsPrimaryAssembly"
-              LibraryPath="$(UnityManagedPath);$(BepInExPath)\core;$(CameraOperatorOutput);$(MSBuildProjectDirectory)\lib"
+              LibraryPath="$(UnityManagedPath);$(BepInExPath)\core;$(MSBuildProjectDirectory)\lib"
               Internalize="true"
               DebugInfo="true"
               Parallel="true" />
@@ -25,6 +21,6 @@
     <Copy SourceFiles="$(IntermediateOutputPath)$(TargetName).merged.pdb"
           DestinationFiles="$(TargetDir)$(TargetName).pdb"
           Condition="Exists('$(IntermediateOutputPath)$(TargetName).merged.pdb')" />
-    <Delete Files="$(TargetDir)CameraOperator.dll;$(TargetDir)CameraOperator.pdb;$(TargetDir)YamlDotNet.dll;$(TargetDir)UnityRuntimeCameraRecorder.dll;$(TargetDir)FFmpegMediaWriter.dll" />
+    <Delete Files="$(TargetDir)CineCapture.dll" />
   </Target>
 </Project>

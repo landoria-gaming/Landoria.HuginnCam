@@ -21,7 +21,7 @@ folder containing `ffmpeg.exe` before starting Valheim. For example, in
 PowerShell:
 
 ```powershell
-$env:FFMPEG_PATH = "C:\tools\ffmpeg\bin"
+[Environment]::SetEnvironmentVariable("FFMPEG_PATH", "C:\tools\ffmpeg\bin", "User")
 ```
 
 ## Record a video
@@ -55,6 +55,27 @@ SagaCapture uses the current game resolution. Keep the game fast enough to
 maintain the selected recording rate of 30 or 60 FPS. If needed, lower the game
 resolution from 4K (`2160p`) to 2K (`1440p`) or Full HD (`1080p`). Prefer a
 native resolution when performance allows it.
+
+## Contributions welcome
+
+CineCapture is the underlying capture project used by SagaCapture. We welcome
+contributions to expand its support across more platforms, GPUs, and graphics
+APIs.
+
+See the project on GitHub:
+[cine-capture/CineCapture](https://github.com/cine-capture/CineCapture).
+
+| Operating system | GPU | Graphics API | Status |
+| --- | --- | --- | --- |
+| Windows x64 | NVIDIA with NVENC | Direct3D 11 | ✅ Supported |
+| Windows x64 | AMD | Direct3D 11 | 🙌 Contributors needed |
+| Windows x64 | Intel | Direct3D 11 | 🙌 Contributors needed |
+| Windows x64 | NVIDIA with NVENC | Direct3D 12 | 🙌 Contributors needed |
+| Linux | NVIDIA, AMD, or Intel | Vulkan | 🙌 Contributors needed |
+| macOS | Apple silicon | Metal | 🙌 Contributors needed |
+
+Testers are also welcome. Share your feedback and results to help validate
+CineCapture on different hardware and environments.
 
 ## Contact
 
